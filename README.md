@@ -1,9 +1,9 @@
 # Proyecto Tecnológico 
 # Integrantes
-Bamberger Buleje, Lady Margareth Elvira
-Ayala Ynfante,Yrene
-Pomatay Jacume, Cinthia Adela 
-Casas Herrera, Juan Manuel
+- Bamberger Buleje, Lady Margareth Elvira
+- Ayala Ynfante,Yrene
+- Pomatay Jacume, Cinthia Adela 
+- Casas Herrera, Juan Manuel
 
 
 ## Descripción
