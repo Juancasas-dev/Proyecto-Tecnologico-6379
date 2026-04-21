@@ -1,0 +1,25 @@
+# logs
+logs
+*.log
+npm-debug.log*
+
+# dependencias
+node_modules
+
+# builds
+dist
+dist-ssr
+build
+
+# env
+.env
+.env.*
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# otros
+*.local
