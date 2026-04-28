@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import React from 'react'
-import Login from '../pages/Login'
+import Login from '../views/authentication/Login'
 import Dashboard from '../pages/Dashboard'
 
 const token = () => localStorage.getItem('token')
