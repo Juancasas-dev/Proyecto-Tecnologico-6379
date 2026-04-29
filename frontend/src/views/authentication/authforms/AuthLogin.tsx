@@ -66,8 +66,8 @@ const AuthLogin = () => {
         Recordar dispositivo
         </Label>
         </div>
-        <Link to="/" className="text-sm font-medium" style={{color: '#5d87ff'}}>
-        ¿Olvidaste tu contraseña?
+       <Link to="/auth/forgot-password" className="text-sm font-medium" style={{color: '#5d87ff'}}>
+    ¿Olvidaste tu contraseña?
         </Link>
       </div>
 
