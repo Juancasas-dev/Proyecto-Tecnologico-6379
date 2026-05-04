@@ -21,7 +21,12 @@ const AuthLogin = () => {
       const data = await loginService(username, password)
       localStorage.setItem('token', data.token)
       localStorage.setItem('usuario', JSON.stringify(data.usuario))
-      navigate('/dashboard')
+
+      if (data.usuario.rol === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/dashboard')
+      }
     } catch {
       setError('Usuario o contraseña incorrectos')
     } finally {
@@ -33,12 +38,12 @@ const AuthLogin = () => {
     <form className="mt-6" onSubmit={handleSubmit}>
       <div className="mb-4">
         <div className="mb-2 block">
-          <Label htmlFor="username" style={{color: '#ffffff'}}>Usuario</Label>
+          <Label htmlFor="username" style={{ color: '#ffffff' }}>Usuario</Label>
         </div>
         <Input
           id="username"
           type="text"
-          placeholder="juangarayar"
+          placeholder="Ingrese su usuario"
           value={username}
           onChange={e => setUsername(e.target.value)}
           required
@@ -47,7 +52,7 @@ const AuthLogin = () => {
 
       <div className="mb-4">
         <div className="mb-2 block">
-          <Label htmlFor="password" style={{color: '#ffffff'}}>Contraseña</Label>
+          <Label htmlFor="password" style={{ color: '#ffffff' }}>Contraseña</Label>
         </div>
         <Input
           id="password"
@@ -62,13 +67,13 @@ const AuthLogin = () => {
       <div className="flex justify-between my-5">
         <div className="flex items-center gap-2">
           <Checkbox id="remember" />
-          <Label htmlFor="remember" className="font-normal cursor-pointer" 
-            style={{color: '#ffffff'}}>
+          <Label htmlFor="remember" className="font-normal cursor-pointer"
+            style={{ color: '#ffffff' }}>
             Recordar dispositivo
           </Label>
         </div>
-        <Link to="/auth/forgot-password" className="text-sm font-medium" 
-          style={{color: '#5d87ff'}}>
+        <Link to="/auth/forgot-password" className="text-sm font-medium"
+          style={{ color: '#5d87ff' }}>
           ¿Olvidaste tu contraseña?
         </Link>
       </div>
@@ -78,7 +83,7 @@ const AuthLogin = () => {
       )}
 
       <Button type="submit" className="w-full h-12 rounded-lg font-semibold text-white"
-        style={{background: '#5d87ff'}} disabled={loading}>
+        style={{ background: '#5d87ff' }} disabled={loading}>
         {loading ? 'Ingresando...' : 'Ingresar'}
       </Button>
     </form>
