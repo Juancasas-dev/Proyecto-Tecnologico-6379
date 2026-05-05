@@ -20,6 +20,13 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+const EnConstruccion = () => (
+  <div className="flex flex-col items-center justify-center h-64 gap-3">
+    <h2 className="text-xl font-semibold text-foreground">Sección en construcción</h2>
+    <p className="text-muted-foreground text-sm">Esta funcionalidad estará disponible próximamente</p>
+  </div>
+)
+
 export default function Router() {
   return (
     <BrowserRouter>
@@ -40,6 +47,7 @@ export default function Router() {
           </PrivateRoute>
         }>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<EnConstruccion />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />

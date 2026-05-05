@@ -1,6 +1,5 @@
 import { Icon } from '@iconify/react'
-import { profileDD } from './data'
-import SimpleBar from 'simplebar-react'
+
 import { Link, useNavigate } from 'react-router-dom'
 import {
   DropdownMenu,
@@ -21,6 +20,27 @@ const Profile = () => {
     navigate('/login')
   }
 
+  // menú según rol
+  const menuItems = [
+    {
+      title: 'Mi Perfil',
+      icon: 'tabler:user',
+      url: '/dashboard/perfil'
+    },
+    // solo el dueño ve gestión de usuarios
+    ...(usuario.rol === 'dueño' ? [{
+      title: 'Gestión de Usuarios',
+      icon: 'tabler:users',
+      url: '/dashboard/usuarios'
+    }] : []),
+    // solo el dueño ve reportes
+    ...(usuario.rol === 'dueño' ? [{
+      title: 'Reportes',
+      icon: 'tabler:chart-bar',
+      url: '/dashboard/reportes'
+    }] : []),
+  ]
+
   return (
     <div className="relative ps-1 sm:ps-15 shrink-0">
       <DropdownMenu>
@@ -36,20 +56,18 @@ const Profile = () => {
             <p className="text-xs text-muted-foreground capitalize">{usuario.rol}</p>
           </div>
           <DropdownMenuSeparator />
-          <SimpleBar>
-            {profileDD.map((item, index) => (
-              <DropdownMenuItem
-                key={index}
-                asChild
-                className="px-4 py-2 flex items-center gap-3 cursor-pointer"
-              >
-                <Link to={item.url}>
-                  <Icon icon={item.icon} className="text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{item.title}</span>
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </SimpleBar>
+          {menuItems.map((item, index) => (
+            <DropdownMenuItem
+              key={index}
+              asChild
+              className="px-4 py-2 flex items-center gap-3 cursor-pointer"
+            >
+              <Link to={item.url}>
+                <Icon icon={item.icon} className="text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{item.title}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))}
           <DropdownMenuSeparator className="my-2" />
           <div className="px-4">
             <Button

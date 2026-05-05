@@ -12,7 +12,9 @@ import {
 import 'swiper/css'
 
 const TopCards = () => {
-  const cards = [
+  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}')
+
+  const todasLasCards = [
     {
       key: 'productos',
       title: 'Productos',
@@ -20,7 +22,8 @@ const TopCards = () => {
       icon: <IconPackage size={40} />,
       bgcolor: 'bg-primary/10',
       textclr: 'text-primary',
-      url: '/dashboard/productos'
+      url: '/dashboard/productos',
+      roles: ['dueño', 'vendedor', 'admin']
     },
     {
       key: 'stock-bajo',
@@ -29,7 +32,8 @@ const TopCards = () => {
       icon: <IconAlertTriangle size={40} />,
       bgcolor: 'bg-error/10',
       textclr: 'text-error',
-      url: '/dashboard/productos'
+      url: '/dashboard/productos',
+      roles: ['dueño', 'vendedor', 'admin']
     },
     {
       key: 'categorias',
@@ -38,7 +42,8 @@ const TopCards = () => {
       icon: <IconCategory size={40} />,
       bgcolor: 'bg-success/10',
       textclr: 'text-success',
-      url: '/dashboard/categorias'
+      url: '/dashboard/categorias',
+      roles: ['dueño', 'vendedor', 'admin']
     },
     {
       key: 'usuarios',
@@ -47,7 +52,8 @@ const TopCards = () => {
       icon: <IconUsers size={40} />,
       bgcolor: 'bg-warning/10',
       textclr: 'text-warning',
-      url: '/dashboard/usuarios'
+      url: '/dashboard/usuarios',
+      roles: ['dueño', 'admin']  // vendedor NO ve esto
     },
     {
       key: 'ingresos',
@@ -56,7 +62,8 @@ const TopCards = () => {
       icon: <IconArrowUp size={40} />,
       bgcolor: 'bg-secondary/10',
       textclr: 'text-secondary',
-      url: '/dashboard/ingresos'
+      url: '/dashboard/ingresos',
+      roles: ['dueño', 'admin']  // vendedor NO ve esto
     },
     {
       key: 'ajustes',
@@ -65,9 +72,15 @@ const TopCards = () => {
       icon: <IconClipboardList size={40} />,
       bgcolor: 'bg-info/10',
       textclr: 'text-info',
-      url: '/dashboard/ajustes'
+      url: '/dashboard/ajustes',
+      roles: ['dueño', 'admin']  // vendedor NO ve esto
     },
   ]
+
+  // filtra según rol del usuario
+  const cards = todasLasCards.filter(card =>
+    card.roles.includes(usuario.rol)
+  )
 
   return (
     <Swiper

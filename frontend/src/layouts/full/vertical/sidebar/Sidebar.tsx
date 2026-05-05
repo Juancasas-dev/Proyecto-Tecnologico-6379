@@ -76,6 +76,10 @@ const renderSidebarItems = (
 const SidebarLayout = ({ onClose }: { onClose?: () => void }) => {
   const location = useLocation()
   const pathname = location.pathname
+   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}')
+  const menuFiltrado = usuario.rol === 'vendedor'
+    ? SidebarContent.filter(s => s.heading !== 'GESTIÓN')
+    : SidebarContent
 
   return (
     <AMSidebar
@@ -94,7 +98,7 @@ const SidebarLayout = ({ onClose }: { onClose?: () => void }) => {
 
       <SimpleBar className="h-[calc(100vh-80px)]">
         <div className="px-6">
-          {SidebarContent.map((section, index) => (
+          {menuFiltrado.map((section, index) => ( 
             <div key={index}>
               {renderSidebarItems(
                 [
