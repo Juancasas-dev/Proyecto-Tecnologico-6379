@@ -50,14 +50,14 @@ export default function AdminDashboard() {
     {
       title: 'Respaldos',
       desc: 'Generar y verificar copias de seguridad',
-      icon: 'solar:database-backup-linear',
+      icon: 'solar:cloud-storage-linear',
       color: 'text-primary',
       bg: 'bg-primary/10',
     },
     {
       title: 'Logs de Actividad',
       desc: 'Auditar acciones por usuario y período',
-      icon: 'solar:clipboard-list-linear',
+      icon: 'solar:document-text-linear',
       color: 'text-success',
       bg: 'bg-success/10',
     },
