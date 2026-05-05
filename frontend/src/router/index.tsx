@@ -5,6 +5,7 @@ import Register from '../views/authentication/Register'
 import ForgotPassword from '../views/authentication/ForgotPassword'
 import Dashboard from '../pages/Dashboard'
 import AdminDashboard from '../pages/AdminDashboard'
+import FullLayout from '../layouts/full/FullLayout'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -26,16 +27,21 @@ export default function Router() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } />
+
         <Route path="/admin" element={
           <AdminRoute>
             <AdminDashboard />
           </AdminRoute>
         } />
+
+        <Route element={
+          <PrivateRoute>
+            <FullLayout />
+          </PrivateRoute>
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
