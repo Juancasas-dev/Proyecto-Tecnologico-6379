@@ -5,6 +5,7 @@ import Register from '../views/authentication/Register'
 import ForgotPassword from '../views/authentication/ForgotPassword'
 import Dashboard from '../pages/Dashboard'
 import AdminDashboard from '../pages/AdminDashboard'
+import FullLayout from '../layouts/full/FullLayout'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -19,6 +20,13 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+const EnConstruccion = () => (
+  <div className="flex flex-col items-center justify-center h-64 gap-3">
+    <h2 className="text-xl font-semibold text-foreground">Sección en construcción</h2>
+    <p className="text-muted-foreground text-sm">Esta funcionalidad estará disponible próximamente</p>
+  </div>
+)
+
 export default function Router() {
   return (
     <BrowserRouter>
@@ -26,16 +34,22 @@ export default function Router() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } />
+
         <Route path="/admin" element={
           <AdminRoute>
             <AdminDashboard />
           </AdminRoute>
         } />
+
+        <Route element={
+          <PrivateRoute>
+            <FullLayout />
+          </PrivateRoute>
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<EnConstruccion />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
