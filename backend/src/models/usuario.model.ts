@@ -10,6 +10,9 @@ export interface IUsuario extends Document {
   intentosFallidos: number
   bloqueado: boolean
   fechaBloqueo: Date | null
+  creadoPor: Schema.Types.ObjectId | null
+  tokenInvalidadoEn: Date | null
+  debeCambiarContrasena: boolean
 }
 
 const UsuarioSchema = new Schema<IUsuario>({
@@ -22,10 +25,13 @@ const UsuarioSchema = new Schema<IUsuario>({
     enum: ['vendedor', 'dueño', 'admin'], 
     default: 'vendedor' 
   },
-  activo:          { type: Boolean, default: true },
-  intentosFallidos:{ type: Number,  default: 0 },
-  bloqueado:       { type: Boolean, default: false },
-  fechaBloqueo:    { type: Date,    default: null }
+  activo:                { type: Boolean, default: true },
+  intentosFallidos:      { type: Number,  default: 0 },
+  bloqueado:             { type: Boolean, default: false },
+  fechaBloqueo:          { type: Date,    default: null },
+  creadoPor:             { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
+  tokenInvalidadoEn:     { type: Date,    default: null },
+  debeCambiarContrasena: { type: Boolean, default: true }
 }, { timestamps: true })
 
 export const Usuario = model<IUsuario>('Usuario', UsuarioSchema)
