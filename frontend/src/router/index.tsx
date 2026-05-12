@@ -27,6 +27,27 @@ const EnConstruccion = () => (
   </div>
 )
 
+const AccesoDenegado = () => (
+  <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+    <h1 className="text-3xl font-bold text-error">403 — Acceso Denegado</h1>
+    <p className="text-muted-foreground text-sm">
+      No tienes permiso para acceder a este módulo.
+    </p>
+    <button
+      onClick={() => window.history.back()}
+      className="text-primary text-sm hover:underline"
+    >
+      Volver atrás
+    </button>
+  </div>
+)
+
+const NegocioRoute = ({ children }: { children: React.ReactNode }) => {
+  if (!token()) return <Navigate to="/login" />
+  if (rol() === 'admin') return <AccesoDenegado />
+  return <>{children}</>
+}
+
 export default function Router() {
   return (
     <BrowserRouter>
@@ -46,8 +67,16 @@ export default function Router() {
             <FullLayout />
           </PrivateRoute>
         }>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/*" element={<EnConstruccion />} />
+          <Route path="/dashboard" element={
+            <NegocioRoute>
+              <Dashboard />
+            </NegocioRoute>
+          } />
+          <Route path="/dashboard/*" element={
+            <NegocioRoute>
+              <EnConstruccion />
+            </NegocioRoute>
+          } />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" />} />

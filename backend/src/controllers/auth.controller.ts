@@ -29,17 +29,45 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body
 
-  const usuario = await Usuario.findOne({ username, activo: true })
+  const usuario = await Usuario.findOne({ username })
+
   if (!usuario) {
     res.status(401).json({ mensaje: 'Credenciales inválidas' })
     return
   }
-
-  const passwordOk = await bcrypt.compare(password, usuario.password)
-  if (!passwordOk) {
-    res.status(401).json({ mensaje: 'Credenciales inválidas' })
+  if (usuario.bloqueado) {
+    res.status(403).json({ 
+      mensaje: 'Cuenta bloqueada por múltiples intentos fallidos. Contacta al administrador.' 
+    })
     return
   }
+  const passwordOk = await bcrypt.compare(password, usuario.password)
+  if (!passwordOk) {
+    usuario.intentosFallidos += 1
+
+    if (usuario.intentosFallidos >= 3) {
+      usuario.bloqueado = true
+      usuario.fechaBloqueo = new Date()
+      await usuario.save()
+
+      console.log(`ALERTA: cuenta ${username} bloqueada por intentos fallidos`)
+
+      res.status(403).json({ 
+        mensaje: 'Cuenta bloqueada por múltiples intentos fallidos.' 
+      })
+      return
+    }
+
+    await usuario.save()
+    res.status(401).json({ 
+      mensaje: `Credenciales inválidas. Intentos restantes: ${3 - usuario.intentosFallidos}` 
+    })
+    return
+  }
+
+  usuario.intentosFallidos = 0
+  usuario.bloqueado = false
+  await usuario.save()
 
   const token = jwt.sign(
     { id: usuario._id, rol: usuario.rol, nombre: usuario.nombre },

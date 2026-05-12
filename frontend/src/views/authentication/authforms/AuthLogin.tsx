@@ -27,8 +27,9 @@ const AuthLogin = () => {
       } else {
         navigate('/dashboard')
       }
-    } catch {
-      setError('Usuario o contraseña incorrectos')
+    } catch (error: any) {
+    const mensaje = error.response?.data?.mensaje || 'Usuario o contraseña incorrectos'
+     setError(mensaje)
     } finally {
       setLoading(false)
     }
