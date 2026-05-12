@@ -5,6 +5,7 @@ import Register from '../views/authentication/Register'
 import ForgotPassword from '../views/authentication/ForgotPassword'
 import Dashboard from '../pages/Dashboard'
 import AdminDashboard from '../pages/AdminDashboard'
+import GestionUsuarios from '../pages/GestionUsuarios'
 import FullLayout from '../layouts/full/FullLayout'
 
 const token = () => localStorage.getItem('token')
@@ -70,6 +71,11 @@ export default function Router() {
           <Route path="/dashboard" element={
             <NegocioRoute>
               <Dashboard />
+            </NegocioRoute>
+          } />
+            <Route path="/dashboard/usuarios" element={  
+            <NegocioRoute>
+              <GestionUsuarios />
             </NegocioRoute>
           } />
           <Route path="/dashboard/*" element={
