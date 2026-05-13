@@ -17,6 +17,9 @@ const Moderndash = () => {
         <TopCards />
       </div>
       <div className="lg:col-span-8 col-span-12 flex">
+        <ProductPerformance />
+      </div>
+      <div className="lg:col-span-8 col-span-12 flex">
         <RevenueUpdate />
       </div>
       <div className="lg:col-span-4 col-span-12">
@@ -25,9 +28,6 @@ const Moderndash = () => {
       </div>
       <div className="lg:col-span-4 col-span-12">
         <RecentTransaction />
-      </div>
-      <div className="lg:col-span-8 col-span-12 flex">
-        <ProductPerformance />
       </div>
       <div className="col-span-12">
         <Footer />
