@@ -68,3 +68,23 @@ export const actualizarProducto = async (req: Request, res: Response) => {
 
   res.json({ mensaje: 'Producto actualizado', producto })
 }
+
+export const cambiarEstadoProducto = async (req: Request, res: Response) => {
+  const { activo } = req.body
+
+  const producto = await Producto.findByIdAndUpdate(
+    req.params.id,
+    { activo },
+    { returnDocument: 'after' }
+  )
+
+  if (!producto) {
+    res.status(404).json({ mensaje: 'Producto no encontrado' })
+    return
+  }
+
+  res.json({ 
+    mensaje: `Producto ${activo ? 'activado' : 'desactivado'}`,
+    producto 
+  })
+}
