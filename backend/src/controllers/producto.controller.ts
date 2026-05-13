@@ -14,8 +14,8 @@ export const listarProductos = async (req: Request, res: Response) => {
     : {}
 
   const productos = await Producto.find(filtro)
-    .populate('categoria', 'nombre')
-    .select('nombre marca categoria tipo precio unidadMedida presentacion nivelMinimo activo')
+  .populate('categoria', 'nombre')
+  .select('nombre marca categoria tipo tipoProducto precio unidadMedida presentacion nivelMinimo stock activo')
 
   res.json(productos)
 }
