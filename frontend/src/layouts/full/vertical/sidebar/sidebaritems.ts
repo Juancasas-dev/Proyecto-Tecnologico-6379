@@ -38,7 +38,7 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/categorias',
       },
       {
-        name: 'Ingresos',
+        name: 'Mercaderia',
         icon: 'solar:arrow-up-linear',
         id: uniqueId(),
         url: '/dashboard/ingresos',
