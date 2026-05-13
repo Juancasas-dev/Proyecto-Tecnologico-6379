@@ -10,7 +10,9 @@
     "start": "node dist/index.js",
     "seed:productos": "ts-node src/scripts/seed.productos.ts",
     "seed:equipamiento": "ts-node src/scripts/seed.equipamiento.ts",
-    "seed:medicamentos": "ts-node src/scripts/seed.medicamentos.ts"
+    "seed:medicamentos": "ts-node src/scripts/seed.medicamentos.ts",
+    "migrate:stock": "ts-node src/scripts/migrate.stock.ts",
+    "migrate:tipoproducto": "ts-node src/scripts/migrate.tipoproducto.ts"
   },
   "keywords": [],
   "author": "",

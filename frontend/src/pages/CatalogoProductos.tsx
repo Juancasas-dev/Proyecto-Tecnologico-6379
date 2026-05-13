@@ -32,10 +32,12 @@ interface Producto {
     marca: string
     categoria: Categoria
     tipo: string
+    tipoProducto: 'alimento' | 'medicamento' | 'equipamiento'
     precio: number
     unidadMedida: string
     presentacion: string
     nivelMinimo: number
+    stock: number
     activo: boolean
 }
 
@@ -49,6 +51,7 @@ export default function CatalogoProductos() {
     const [loading, setLoading] = useState(true)
     const [globalFilter, setGlobalFilter] = useState('')
     const [sorting, setSorting] = useState<SortingState>([])
+    const [filtroTipo, setFiltroTipo] = useState<string>('todos')
     const [modalAbierto, setModalAbierto] = useState(false)
     const [productoEditando, setProductoEditando] = useState<Producto | null>(null)
     const [formError, setFormError] = useState('')
@@ -56,7 +59,8 @@ export default function CatalogoProductos() {
     const [form, setForm] = useState({
         nombre: '', marca: '', categoria: '',
         tipo: '', precio: '', unidadMedida: '',
-        presentacion: '', nivelMinimo: '0'
+        presentacion: '', nivelMinimo: '0',
+        tipoProducto: ''
     })
     const colorCategoria = (nombre: string) => {
         const colores: Record<string, string> = {
@@ -93,7 +97,7 @@ export default function CatalogoProductos() {
 
     const abrirModalNuevo = () => {
         setProductoEditando(null)
-        setForm({ nombre: '', marca: '', categoria: '', tipo: '', precio: '', unidadMedida: '', presentacion: '', nivelMinimo: '0' })
+        setForm({ nombre: '', marca: '', categoria: '', tipo: '', precio: '', unidadMedida: '', presentacion: '', nivelMinimo: '0', tipoProducto: '' })
         setFormError('')
         setModalAbierto(true)
     }
@@ -108,7 +112,8 @@ export default function CatalogoProductos() {
             precio: String(producto.precio),
             unidadMedida: producto.unidadMedida,
             presentacion: producto.presentacion,
-            nivelMinimo: String(producto.nivelMinimo)
+            nivelMinimo: String(producto.nivelMinimo),
+            tipoProducto: producto.tipoProducto
         })
         setFormError('')
         setModalAbierto(true)
@@ -193,6 +198,20 @@ export default function CatalogoProductos() {
             )
         },
         {
+            accessorKey: 'stock',
+            header: 'Stock',
+            cell: ({ row }) => (
+                <span className={`font-medium text-sm ${row.original.stock === 0
+                    ? 'text-error'
+                    : row.original.stock <= row.original.nivelMinimo
+                        ? 'text-warning'
+                        : 'text-success'
+                    }`}>
+                    {row.original.stock}
+                </span>
+            )
+        },
+        {
             accessorKey: 'nivelMinimo',
             header: 'Nivel Mín.',
             cell: ({ row }) => (
@@ -225,8 +244,8 @@ export default function CatalogoProductos() {
                     <button
                         onClick={() => handleEstadoProducto(row.original._id, !row.original.activo)}
                         className={`w-8 h-8 rounded-full flex items-center justify-center transition ${row.original.activo
-                                ? 'bg-error/10 text-error hover:bg-error/20'
-                                : 'bg-success/10 text-success hover:bg-success/20'
+                            ? 'bg-error/10 text-error hover:bg-error/20'
+                            : 'bg-success/10 text-success hover:bg-success/20'
                             }`}
                     >
                         <Icon icon={row.original.activo ? 'solar:eye-closed-linear' : 'solar:eye-linear'} height={16} />
@@ -236,8 +255,14 @@ export default function CatalogoProductos() {
         }] : [])
     ], [esDueno])
 
+   const productosFiltrados = useMemo(() => {
+  return filtroTipo === 'todos'
+    ? productos
+    : productos.filter(p => p.tipoProducto === filtroTipo)
+}, [filtroTipo, productos])
+
     const table = useReactTable({
-        data: productos,
+        data: productosFiltrados,
         columns,
         state: { globalFilter, sorting },
         onGlobalFilterChange: setGlobalFilter,
@@ -265,7 +290,9 @@ export default function CatalogoProductos() {
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-xl font-semibold text-foreground">Catálogo de Productos</h1>
-                    <p className="text-muted-foreground text-sm">{productos.length} productos registrados</p>
+                    <p className="text-muted-foreground text-sm">
+                        {productosFiltrados.length} de {productos.length} productos
+                    </p>
                 </div>
                 {esDueno && (
                     <button
@@ -276,6 +303,24 @@ export default function CatalogoProductos() {
                         Nuevo producto
                     </button>
                 )}
+            </div>
+
+            {/* Filtros por tipo */}
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
+                    <button
+                        key={tipo}
+                        onClick={() => setFiltroTipo(tipo)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${filtroTipo === tipo
+                                ? 'bg-primary text-white'
+                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                            }`}
+                    >
+                        {tipo === 'todos' ? 'Todos' :
+                            tipo === 'alimento' ? 'Alimentos' :
+                                tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+                    </button>
+                ))}
             </div>
 
             {/* Buscador */}
@@ -402,6 +447,16 @@ export default function CatalogoProductos() {
 
                             {!productoEditando && (
                                 <>
+                                    <div>
+                                        <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
+                                        <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })} required
+                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                            <option value="">Seleccionar</option>
+                                            <option value="alimento">Alimento</option>
+                                            <option value="medicamento">Medicamento</option>
+                                            <option value="equipamiento">Equipamiento</option>
+                                        </select>
+                                    </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Nombre</label>
                                         <input type="text" placeholder="Ricocan Adultos..." value={form.nombre}
