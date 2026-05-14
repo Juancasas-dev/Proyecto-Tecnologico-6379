@@ -8,6 +8,7 @@ import AdminDashboard from '../pages/AdminDashboard'
 import GestionUsuarios from '../pages/GestionUsuarios'
 import FullLayout from '../layouts/full/FullLayout'
 import CatalogoProductos from '../pages/CatalogoProductos'
+import Mercaderia from '../pages/Mercaderia'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -74,14 +75,20 @@ export default function Router() {
               <Dashboard />
             </NegocioRoute>
           } />
-            <Route path="/dashboard/usuarios" element={  
+          <Route path="/dashboard/usuarios" element={
             <NegocioRoute>
               <GestionUsuarios />
             </NegocioRoute>
           } />
-           <Route path="/dashboard/productos" element={  
+          <Route path="/dashboard/productos" element={
             <NegocioRoute>
               <CatalogoProductos />
+            </NegocioRoute>
+          } />
+
+          <Route path="/dashboard/mercaderia" element={
+            <NegocioRoute>
+              <Mercaderia />
             </NegocioRoute>
           } />
           <Route path="/dashboard/*" element={
