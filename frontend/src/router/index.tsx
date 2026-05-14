@@ -85,7 +85,6 @@ export default function Router() {
               <CatalogoProductos />
             </NegocioRoute>
           } />
-
           <Route path="/dashboard/mercaderia" element={
             <NegocioRoute>
               <Mercaderia />
