@@ -22,14 +22,16 @@ const AuthLogin = () => {
       localStorage.setItem('token', data.token)
       localStorage.setItem('usuario', JSON.stringify(data.usuario))
 
-      if (data.usuario.rol === 'admin') {
+      if (data.usuario.debeCambiarContrasena) {
+        navigate('/cambiar-contrasena')
+      } else if (data.usuario.rol === 'admin') {
         navigate('/admin')
       } else {
         navigate('/dashboard')
       }
     } catch (error: any) {
-    const mensaje = error.response?.data?.mensaje || 'Usuario o contraseña incorrectos'
-     setError(mensaje)
+      const mensaje = error.response?.data?.mensaje || 'Usuario o contraseña incorrectos'
+      setError(mensaje)
     } finally {
       setLoading(false)
     }

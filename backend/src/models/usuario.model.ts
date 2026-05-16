@@ -13,6 +13,8 @@ export interface IUsuario extends Document {
   creadoPor: Schema.Types.ObjectId | null
   tokenInvalidadoEn: Date | null
   debeCambiarContrasena: boolean
+  resetToken: string | null        
+  resetTokenExpira: Date | null    
 }
 
 const UsuarioSchema = new Schema<IUsuario>({
@@ -31,7 +33,9 @@ const UsuarioSchema = new Schema<IUsuario>({
   fechaBloqueo:          { type: Date,    default: null },
   creadoPor:             { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
   tokenInvalidadoEn:     { type: Date,    default: null },
-  debeCambiarContrasena: { type: Boolean, default: true }
+  debeCambiarContrasena: { type: Boolean, default: true },
+   resetToken:            { type: String,  default: null },  
+  resetTokenExpira:      { type: Date,    default: null }   
 }, { timestamps: true })
 
 export const Usuario = model<IUsuario>('Usuario', UsuarioSchema)
