@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { Usuario } from '../models/usuario.model'
 
+
 export const register = async (req: Request, res: Response) => {
   const { nombre, username, email, password, rol } = req.body
 
@@ -19,8 +20,8 @@ export const register = async (req: Request, res: Response) => {
   }
 
   const hash = await bcrypt.hash(password, 10)
-  const usuario = await Usuario.create({ 
-    nombre, username, email, password: hash, rol 
+  const usuario = await Usuario.create({
+    nombre, username, email, password: hash, rol
   })
 
   res.status(201).json({ mensaje: 'Usuario creado', id: usuario._id })
@@ -36,8 +37,8 @@ export const login = async (req: Request, res: Response) => {
     return
   }
   if (usuario.bloqueado) {
-    res.status(403).json({ 
-      mensaje: 'Cuenta bloqueada por múltiples intentos fallidos. Contacta al administrador.' 
+    res.status(403).json({
+      mensaje: 'Cuenta bloqueada por múltiples intentos fallidos. Contacta al administrador.'
     })
     return
   }
@@ -52,15 +53,15 @@ export const login = async (req: Request, res: Response) => {
 
       console.log(`ALERTA: cuenta ${username} bloqueada por intentos fallidos`)
 
-      res.status(403).json({ 
-        mensaje: 'Cuenta bloqueada por múltiples intentos fallidos.' 
+      res.status(403).json({
+        mensaje: 'Cuenta bloqueada por múltiples intentos fallidos.'
       })
       return
     }
 
     await usuario.save()
-    res.status(401).json({ 
-      mensaje: `Credenciales inválidas. Intentos restantes: ${3 - usuario.intentosFallidos}` 
+    res.status(401).json({
+      mensaje: `Credenciales inválidas. Intentos restantes: ${3 - usuario.intentosFallidos}`
     })
     return
   }
@@ -69,18 +70,39 @@ export const login = async (req: Request, res: Response) => {
   usuario.bloqueado = false
   await usuario.save()
 
+  const tiempoSesion = usuario.rol === 'dueño' ? '12h' : '8h'
   const token = jwt.sign(
-    { id: usuario._id, rol: usuario.rol, nombre: usuario.nombre },
-    process.env.JWT_SECRET!,
-    { expiresIn: '8h' }
-  )
+  { id: usuario._id, rol: usuario.rol, nombre: usuario.nombre },
+  process.env.JWT_SECRET!,
+  { expiresIn: tiempoSesion }
+)
 
-  res.json({ 
-    token, 
-    usuario: { 
-      nombre: usuario.nombre, 
+  res.json({
+    token,
+    usuario: {
+      nombre: usuario.nombre,
       username: usuario.username,
-      rol: usuario.rol 
-    } 
+      rol: usuario.rol,
+      debeCambiarContrasena: usuario.debeCambiarContrasena  
+    }
   })
+}
+
+export const cambiarContrasena = async (req: Request, res: Response) => {
+  const { nuevaContrasena } = req.body
+  const usuarioId = (req as any).usuario.id
+
+  if (!nuevaContrasena || nuevaContrasena.length < 8) {
+    res.status(400).json({ mensaje: 'La contraseña debe tener al menos 8 caracteres' })
+    return
+  }
+
+  const hash = await bcrypt.hash(nuevaContrasena, 10)
+
+  await Usuario.findByIdAndUpdate(usuarioId, {
+    password: hash,
+    debeCambiarContrasena: false
+  })
+
+  res.json({ mensaje: 'Contraseña actualizada correctamente' })
 }

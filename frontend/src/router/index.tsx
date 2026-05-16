@@ -9,6 +9,7 @@ import GestionUsuarios from '../pages/GestionUsuarios'
 import FullLayout from '../layouts/full/FullLayout'
 import CatalogoProductos from '../pages/CatalogoProductos'
 import Mercaderia from '../pages/Mercaderia'
+import CambiarContrasena from '../pages/CambiarContrasena'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -96,7 +97,7 @@ export default function Router() {
             </NegocioRoute>
           } />
         </Route>
-
+          <Route path="/cambiar-contrasena" element={<CambiarContrasena />} /> 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

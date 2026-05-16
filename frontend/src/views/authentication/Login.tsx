@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import AuthLogin from './authforms/AuthLogin'
 
 const Login = () => {
@@ -15,13 +14,6 @@ const Login = () => {
           </div>
 
           <AuthLogin />
-
-          <div className="flex gap-2 text-sm mt-6 items-center justify-center">
-            <p className="text-foreground font-semibold">¿No tienes cuenta?</p>
-            <Link to="/auth/register" className="text-primary font-medium">
-              Crear cuenta
-            </Link>
-          </div>
 
         </div>
       </div>
