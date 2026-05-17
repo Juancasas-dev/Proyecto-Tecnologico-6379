@@ -62,6 +62,8 @@ export default function CatalogoProductos() {
         presentacion: '', nivelMinimo: '0',
         tipoProducto: ''
     })
+    const [camposError, setCamposError] = useState<string[]>([])
+    const [productoDuplicadoId, setProductoDuplicadoId] = useState<string | null>(null)
     const colorCategoria = (nombre: string) => {
         const colores: Record<string, string> = {
             'Perros': 'bg-blue-500/10 text-blue-400',
@@ -122,7 +124,30 @@ export default function CatalogoProductos() {
     const handleGuardar = async (e: React.FormEvent) => {
         e.preventDefault()
         setFormError('')
+        setCamposError([])
+        setProductoDuplicadoId(null)
         setFormLoading(true)
+
+
+        if (!productoEditando) {
+            const vacios: string[] = []
+            if (!form.nombre) vacios.push('nombre')
+            if (!form.marca) vacios.push('marca')
+            if (!form.categoria) vacios.push('categoria')
+            if (!form.tipo) vacios.push('tipo')
+            if (!form.precio) vacios.push('precio')
+            if (!form.presentacion) vacios.push('presentacion')
+            if (!form.unidadMedida) vacios.push('unidadMedida')
+            if (!form.tipoProducto) vacios.push('tipoProducto')
+
+            if (vacios.length > 0) {
+                setCamposError(vacios)
+                setFormError('Completa los campos requeridos antes de guardar')
+                setFormLoading(false)
+                return
+            }
+        }
+
         try {
             if (productoEditando) {
                 await axios.patch(`${API}/productos/${productoEditando._id}`, {
@@ -139,8 +164,12 @@ export default function CatalogoProductos() {
             setModalAbierto(false)
             cargarDatos()
         } catch (error: any) {
-            const msg = error.response?.data?.mensaje || 'Error al guardar producto'
-            setFormError(msg)
+            if (error.response?.status === 409) {
+                setFormError('Ya existe un producto con ese nombre, marca y presentación')
+                setProductoDuplicadoId(error.response.data.id)
+            } else {
+                setFormError(error.response?.data?.mensaje || 'Error al guardar producto')
+            }
         } finally {
             setFormLoading(false)
         }
@@ -255,11 +284,11 @@ export default function CatalogoProductos() {
         }] : [])
     ], [esDueno])
 
-   const productosFiltrados = useMemo(() => {
-  return filtroTipo === 'todos'
-    ? productos
-    : productos.filter(p => p.tipoProducto === filtroTipo)
-}, [filtroTipo, productos])
+    const productosFiltrados = useMemo(() => {
+        return filtroTipo === 'todos'
+            ? productos
+            : productos.filter(p => p.tipoProducto === filtroTipo)
+    }, [filtroTipo, productos])
 
     const table = useReactTable({
         data: productosFiltrados,
@@ -312,8 +341,8 @@ export default function CatalogoProductos() {
                         key={tipo}
                         onClick={() => setFiltroTipo(tipo)}
                         className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${filtroTipo === tipo
-                                ? 'bg-primary text-white'
-                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                            ? 'bg-primary text-white'
+                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                             }`}
                     >
                         {tipo === 'todos' ? 'Todos' :
@@ -369,7 +398,7 @@ export default function CatalogoProductos() {
                         <TableBody>
                             {table.getRowModel().rows.length > 0 ? (
                                 table.getRowModel().rows.map(row => (
-                                    <TableRow key={row.id}>
+                                    <TableRow key={row.id} id={`producto-${row.original._id}`}>
                                         {row.getVisibleCells().map(cell => (
                                             <TableCell key={cell.id}>
                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -449,8 +478,9 @@ export default function CatalogoProductos() {
                                 <>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
-                                        <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })} required
-                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                        <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })} 
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('tipoProducto') ? 'border-error' : 'border-border focus:border-primary'
+                                                }`}>
                                             <option value="">Seleccionar</option>
                                             <option value="alimento">Alimento</option>
                                             <option value="medicamento">Medicamento</option>
@@ -460,19 +490,22 @@ export default function CatalogoProductos() {
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Nombre</label>
                                         <input type="text" placeholder="Ricocan Adultos..." value={form.nombre}
-                                            onChange={e => setForm({ ...form, nombre: e.target.value })} required
-                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                            onChange={e => setForm({ ...form, nombre: e.target.value })} 
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('nombre') ? 'border-error' : 'border-border focus:border-primary'
+                                                }`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Marca</label>
                                         <input type="text" placeholder="Ricocan" value={form.marca}
-                                            onChange={e => setForm({ ...form, marca: e.target.value })} required
-                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                            onChange={e => setForm({ ...form, marca: e.target.value })} 
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('marca') ? 'border-error' : 'border-border focus:border-primary'
+                                                }`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Categoría</label>
-                                        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} required
-                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} 
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('categoria') ? 'border-error' : 'border-border focus:border-primary'
+                                                }`}>
                                             <option value="">Seleccionar categoría</option>
                                             {categorias.map(c => (
                                                 <option key={c._id} value={c._id}>{c.nombre}</option>
@@ -482,14 +515,16 @@ export default function CatalogoProductos() {
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Tipo</label>
                                         <input type="text" placeholder="Adulto, Cachorro..." value={form.tipo}
-                                            onChange={e => setForm({ ...form, tipo: e.target.value })} required
-                                            className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                            onChange={e => setForm({ ...form, tipo: e.target.value })} 
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('tipo') ? 'border-error' : 'border-border focus:border-primary'
+                                                }`} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-sm text-foreground mb-1 block">Presentación</label>
-                                            <select value={form.presentacion} onChange={e => setForm({ ...form, presentacion: e.target.value })} required
-                                                className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                            <select value={form.presentacion} onChange={e => setForm({ ...form, presentacion: e.target.value })} 
+                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('presentacion') ? 'border-error' : 'border-border focus:border-primary'
+                                                    }`}>
                                                 <option value="">Seleccionar</option>
                                                 <option value="Bolsa">Bolsa</option>
                                                 <option value="Saco">Saco</option>
@@ -499,8 +534,9 @@ export default function CatalogoProductos() {
                                         <div>
                                             <label className="text-sm text-foreground mb-1 block">Unidad de medida</label>
                                             <input type="text" placeholder="3 kg, 500 g..." value={form.unidadMedida}
-                                                onChange={e => setForm({ ...form, unidadMedida: e.target.value })} required
-                                                className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                                onChange={e => setForm({ ...form, unidadMedida: e.target.value })} 
+                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('unidadMedida') ? 'border-error' : 'border-border focus:border-primary'
+                                                    }`} />
                                         </div>
                                     </div>
                                 </>
@@ -510,8 +546,9 @@ export default function CatalogoProductos() {
                                 <div>
                                     <label className="text-sm text-foreground mb-1 block">Precio (S/)</label>
                                     <input type="number" step="0.1" placeholder="0.00" value={form.precio}
-                                        onChange={e => setForm({ ...form, precio: e.target.value })} required
-                                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                        onChange={e => setForm({ ...form, precio: e.target.value })} 
+                                        className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('precio') ? 'border-error' : 'border-border focus:border-primary'
+                                            }`} />
                                 </div>
                                 <div>
                                     <label className="text-sm text-foreground mb-1 block">Nivel mínimo</label>
@@ -522,7 +559,22 @@ export default function CatalogoProductos() {
                             </div>
 
                             {formError && (
-                                <p className="text-error text-sm text-center">{formError}</p>
+                                <div className="text-center">
+                                    <p className="text-error text-sm">{formError}</p>
+                                    {productoDuplicadoId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setModalAbierto(false)
+                                                const elemento = document.getElementById(`producto-${productoDuplicadoId}`)
+                                                elemento?.scrollIntoView({ behavior: 'smooth' })
+                                            }}
+                                            className="text-primary text-xs hover:underline mt-1"
+                                        >
+                                            Ver producto existente →
+                                        </button>
+                                    )}
+                                </div>
                             )}
 
                             <button type="submit" disabled={formLoading}
