@@ -14,6 +14,12 @@ export const registrarIngreso = async (req: Request, res: Response) => {
         mensaje: 'Producto, cantidad y fecha de vencimiento son obligatorios'
       })
     }
+    
+     if (new Date(fechaVencimiento) < new Date()) {
+      return res.status(400).json({ 
+        mensaje: 'La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.'
+      })
+    }
 
     if (cantidad <= 0) {
       return res.status(400).json({
