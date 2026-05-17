@@ -35,7 +35,7 @@ const AccesoDenegado = () => (
   <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
     <h1 className="text-3xl font-bold text-error">403 — Acceso Denegado</h1>
     <p className="text-muted-foreground text-sm">
-      No tienes permiso para acceder a este módulo.
+      No tienes permiso para acceder a esta sección.
     </p>
     <button
       onClick={() => window.history.back()}
