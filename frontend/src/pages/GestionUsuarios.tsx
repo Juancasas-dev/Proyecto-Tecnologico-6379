@@ -177,32 +177,31 @@ export default function GestionUsuarios() {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-  <div className="flex flex-col gap-1">
-    {u.debeCambiarContrasena && u.activo ? (
-      <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-warning/10 text-warning">
-        Pendiente activación
-      </span>
-    ) : (
-      <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
-        u.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-      }`}>
-        {u.activo ? 'Activo' : 'Inactivo'}
-      </span>
-    )}
-    {u.bloqueado && (
-      <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-error/10 text-error">
-        Bloqueado
-      </span>
-    )}
-  </div>
-</td>
+                    <div className="flex flex-col gap-1">
+                      {u.debeCambiarContrasena && u.activo ? (
+                        <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-warning/10 text-warning">
+                          Pendiente activación
+                        </span>
+                      ) : (
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${u.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                          }`}>
+                          {u.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      )}
+                      {u.bloqueado && (
+                        <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-error/10 text-error">
+                          Bloqueado
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEstado(u._id, !u.activo)}
                         className={`text-xs px-3 py-1.5 rounded-lg border transition ${u.activo
-                            ? 'border-error text-error hover:bg-error/10'
-                            : 'border-success text-success hover:bg-success/10'
+                          ? 'border-error text-error hover:bg-error/10'
+                          : 'border-success text-success hover:bg-success/10'
                           }`}
                       >
                         {u.activo ? 'Desactivar' : 'Activar'}

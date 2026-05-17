@@ -104,7 +104,7 @@ export default function CambiarContrasena() {
                 <h1 className="text-2xl font-bold" style={{ color: '#5d87ff' }}>SIVWEB</h1>
                 <p className="text-white font-medium mt-2">Cambiar contraseña</p>
                 <p className="text-gray-400 text-sm mt-1">
-                  Hola <strong className="text-white">{usuario.nombre}</strong>, 
+                  Hola <strong className="text-white">{usuario.nombre}</strong>,
                   debes cambiar tu contraseña antes de continuar.
                 </p>
               </div>
