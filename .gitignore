@@ -25,4 +25,4 @@ build
 *.local
 
 #backup
-/backup
+backups/
