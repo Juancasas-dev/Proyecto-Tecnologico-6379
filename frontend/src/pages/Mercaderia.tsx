@@ -45,7 +45,7 @@ export default function Mercaderia() {
   const esDueno = usuario.rol === 'dueño'
   const headers = { Authorization: `Bearer ${getToken()}` }
 
-    const productosFiltrados = useMemo(() => {
+  const productosFiltrados = useMemo(() => {
     return filtroTipo === 'todos'
       ? productos
       : productos.filter(p => p.tipoProducto === filtroTipo)
@@ -92,9 +92,9 @@ export default function Mercaderia() {
     e.preventDefault()
     setFormError('')
     if (form.fechaVencimiento && new Date(form.fechaVencimiento) < new Date()) {
-    setFormError('La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.')
-    return
-  }
+      setFormError('La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.')
+      return
+    }
     setFormLoading(true)
     try {
       if (editando) {
@@ -199,22 +199,20 @@ export default function Mercaderia() {
                     {formatearFecha(ingreso.fechaIngreso)}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      new Date(ingreso.fechaVencimiento) < new Date()
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${new Date(ingreso.fechaVencimiento) < new Date()
                         ? 'bg-error/10 text-error'
                         : new Date(ingreso.fechaVencimiento) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-success/10 text-success'
-                    }`}>
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-success/10 text-success'
+                      }`}>
                       {formatearFecha(ingreso.fechaVencimiento)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`font-medium text-sm ${
-                      ingreso.producto?.stock === 0
+                    <span className={`font-medium text-sm ${ingreso.producto?.stock === 0
                         ? 'text-error'
                         : 'text-success'
-                    }`}>
+                      }`}>
                       {ingreso.producto?.stock}
                     </span>
                   </td>
@@ -257,46 +255,45 @@ export default function Mercaderia() {
             </div>
 
             <form onSubmit={handleGuardar} className="flex flex-col gap-4">
-             {!editando && (
-  <div>
-    <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
-    <div className="flex gap-2 mb-2 flex-wrap">
-      {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
-        <button
-          key={tipo}
-          type="button"
-          onClick={() => setFiltroTipo(tipo)}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-            filtroTipo === tipo
-              ? 'bg-primary text-white'
-              : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-          }`}
-        >
-          {tipo === 'todos' ? 'Todos' :
-           tipo === 'alimento' ? 'Alimentos' :
-           tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
-        </button>
-      ))}
-    </div>
-    <label className="text-sm text-foreground mb-1 block">Producto</label>
-    <select
-      value={form.producto}
-      onChange={e => setForm({...form, producto: e.target.value})}
-      className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition"
-    >
-      <option value="">
-        {productosFiltrados.length === 0
-          ? 'Este producto no existe en el catálogo'
-          : 'Seleccionar producto'}
-      </option>
-      {productosFiltrados.map(p => (
-        <option key={p._id} value={p._id}>
-          {p.nombre} — Stock actual: {p.stock}
-        </option>
-      ))}
-    </select>
-  </div>
-)}
+              {!editando && (
+                <div>
+                  <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
+                  <div className="flex gap-2 mb-2 flex-wrap">
+                    {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
+                      <button
+                        key={tipo}
+                        type="button"
+                        onClick={() => setFiltroTipo(tipo)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition ${filtroTipo === tipo
+                            ? 'bg-primary text-white'
+                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                          }`}
+                      >
+                        {tipo === 'todos' ? 'Todos' :
+                          tipo === 'alimento' ? 'Alimentos' :
+                            tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-sm text-foreground mb-1 block">Producto</label>
+                  <select
+                    value={form.producto}
+                    onChange={e => setForm({ ...form, producto: e.target.value })}
+                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition"
+                  >
+                    <option value="">
+                      {productosFiltrados.length === 0
+                        ? 'Este producto no existe en el catálogo'
+                        : 'Seleccionar producto'}
+                    </option>
+                    {productosFiltrados.map(p => (
+                      <option key={p._id} value={p._id}>
+                        {p.nombre} — Stock actual: {p.stock}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm text-foreground mb-1 block">Cantidad</label>
@@ -305,7 +302,7 @@ export default function Mercaderia() {
                   min="1"
                   placeholder="0"
                   value={form.cantidad}
-                  onChange={e => setForm({...form, cantidad: e.target.value})}
+                  onChange={e => setForm({ ...form, cantidad: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                 />
@@ -317,7 +314,7 @@ export default function Mercaderia() {
                   <input
                     type="date"
                     value={form.fechaIngreso}
-                    onChange={e => setForm({...form, fechaIngreso: e.target.value})}
+                    onChange={e => setForm({ ...form, fechaIngreso: e.target.value })}
                     required
                     className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                   />
@@ -329,7 +326,7 @@ export default function Mercaderia() {
                 <input
                   type="date"
                   value={form.fechaVencimiento}
-                  onChange={e => setForm({...form, fechaVencimiento: e.target.value})}
+                  onChange={e => setForm({ ...form, fechaVencimiento: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                 />

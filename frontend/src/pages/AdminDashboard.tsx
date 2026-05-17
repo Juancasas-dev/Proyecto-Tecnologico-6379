@@ -53,6 +53,7 @@ export default function AdminDashboard() {
       icon: 'solar:cloud-storage-linear',
       color: 'text-primary',
       bg: 'bg-primary/10',
+      url: '/admin/respaldos'
     },
     {
       title: 'Logs de Actividad',
@@ -170,6 +171,7 @@ export default function AdminDashboard() {
           {acciones.map((accion, i) => (
             <div
               key={i}
+              onClick={() => accion.url && navigate(accion.url)}
               className="bg-card border border-border rounded-lg p-5 cursor-pointer hover:border-primary transition"
             >
               <div className={`${accion.bg} w-12 h-12 rounded-lg flex items-center justify-center mb-3`}>
@@ -202,13 +204,12 @@ export default function AdminDashboard() {
                   <td className="py-3 px-4 text-muted-foreground">{log.accion}</td>
                   <td className="py-3 px-4 text-muted-foreground">{log.fecha}</td>
                   <td className="py-3 px-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      log.tipo === 'success' ? 'bg-success/10 text-success' :
-                      log.tipo === 'error'   ? 'bg-error/10 text-error' :
-                      'bg-warning/10 text-warning'
-                    }`}>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${log.tipo === 'success' ? 'bg-success/10 text-success' :
+                        log.tipo === 'error' ? 'bg-error/10 text-error' :
+                          'bg-warning/10 text-warning'
+                      }`}>
                       {log.tipo === 'success' ? 'Exitoso' :
-                       log.tipo === 'error'   ? 'Fallido' : 'Alerta'}
+                        log.tipo === 'error' ? 'Fallido' : 'Alerta'}
                     </span>
                   </td>
                 </tr>
