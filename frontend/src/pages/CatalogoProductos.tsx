@@ -478,7 +478,7 @@ export default function CatalogoProductos() {
                                 <>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
-                                        <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })} 
+                                        <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })}
                                             className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('tipoProducto') ? 'border-error' : 'border-border focus:border-primary'
                                                 }`}>
                                             <option value="">Seleccionar</option>
@@ -490,20 +490,20 @@ export default function CatalogoProductos() {
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Nombre</label>
                                         <input type="text" placeholder="Ricocan Adultos..." value={form.nombre}
-                                            onChange={e => setForm({ ...form, nombre: e.target.value })} 
+                                            onChange={e => setForm({ ...form, nombre: e.target.value })}
                                             className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('nombre') ? 'border-error' : 'border-border focus:border-primary'
                                                 }`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Marca</label>
                                         <input type="text" placeholder="Ricocan" value={form.marca}
-                                            onChange={e => setForm({ ...form, marca: e.target.value })} 
+                                            onChange={e => setForm({ ...form, marca: e.target.value })}
                                             className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('marca') ? 'border-error' : 'border-border focus:border-primary'
                                                 }`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Categoría</label>
-                                        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })} 
+                                        <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
                                             className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('categoria') ? 'border-error' : 'border-border focus:border-primary'
                                                 }`}>
                                             <option value="">Seleccionar categoría</option>
@@ -515,14 +515,14 @@ export default function CatalogoProductos() {
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Tipo</label>
                                         <input type="text" placeholder="Adulto, Cachorro..." value={form.tipo}
-                                            onChange={e => setForm({ ...form, tipo: e.target.value })} 
+                                            onChange={e => setForm({ ...form, tipo: e.target.value })}
                                             className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('tipo') ? 'border-error' : 'border-border focus:border-primary'
                                                 }`} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-sm text-foreground mb-1 block">Presentación</label>
-                                            <select value={form.presentacion} onChange={e => setForm({ ...form, presentacion: e.target.value })} 
+                                            <select value={form.presentacion} onChange={e => setForm({ ...form, presentacion: e.target.value })}
                                                 className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('presentacion') ? 'border-error' : 'border-border focus:border-primary'
                                                     }`}>
                                                 <option value="">Seleccionar</option>
@@ -534,7 +534,7 @@ export default function CatalogoProductos() {
                                         <div>
                                             <label className="text-sm text-foreground mb-1 block">Unidad de medida</label>
                                             <input type="text" placeholder="3 kg, 500 g..." value={form.unidadMedida}
-                                                onChange={e => setForm({ ...form, unidadMedida: e.target.value })} 
+                                                onChange={e => setForm({ ...form, unidadMedida: e.target.value })}
                                                 className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('unidadMedida') ? 'border-error' : 'border-border focus:border-primary'
                                                     }`} />
                                         </div>
@@ -546,7 +546,7 @@ export default function CatalogoProductos() {
                                 <div>
                                     <label className="text-sm text-foreground mb-1 block">Precio (S/)</label>
                                     <input type="number" step="0.1" placeholder="0.00" value={form.precio}
-                                        onChange={e => setForm({ ...form, precio: e.target.value })} 
+                                        onChange={e => setForm({ ...form, precio: e.target.value })}
                                         className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('precio') ? 'border-error' : 'border-border focus:border-primary'
                                             }`} />
                                 </div>
