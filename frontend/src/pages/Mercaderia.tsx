@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import axios from 'axios'
 
@@ -7,6 +7,7 @@ interface Producto {
   nombre: string
   marca: string
   stock: number
+  tipoProducto: 'alimento' | 'medicamento' | 'equipamiento'
 }
 
 interface Ingreso {
@@ -39,10 +40,16 @@ export default function Mercaderia() {
     fechaIngreso: '',
     fechaVencimiento: ''
   })
-
+  const [filtroTipo, setFiltroTipo] = useState<string>('todos')
   const usuario = getUsuario()
   const esDueno = usuario.rol === 'dueño'
   const headers = { Authorization: `Bearer ${getToken()}` }
+
+    const productosFiltrados = useMemo(() => {
+    return filtroTipo === 'todos'
+      ? productos
+      : productos.filter(p => p.tipoProducto === filtroTipo)
+  }, [filtroTipo, productos])
 
   const cargarDatos = async () => {
     try {
@@ -84,6 +91,10 @@ export default function Mercaderia() {
   const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    if (form.fechaVencimiento && new Date(form.fechaVencimiento) < new Date()) {
+    setFormError('La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.')
+    return
+  }
     setFormLoading(true)
     try {
       if (editando) {
@@ -235,7 +246,7 @@ export default function Mercaderia() {
       {/* Modal */}
       {modalAbierto && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg p-6">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-semibold text-foreground">
                 {editando ? 'Editar Ingreso' : 'Registrar Ingreso'}
@@ -246,24 +257,46 @@ export default function Mercaderia() {
             </div>
 
             <form onSubmit={handleGuardar} className="flex flex-col gap-4">
-              {!editando && (
-                <div>
-                  <label className="text-sm text-foreground mb-1 block">Producto</label>
-                  <select
-                    value={form.producto}
-                    onChange={e => setForm({...form, producto: e.target.value})}
-                    required
-                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition"
-                  >
-                    <option value="">Seleccionar producto</option>
-                    {productos.map(p => (
-                      <option key={p._id} value={p._id}>
-                        {p.nombre} — Stock actual: {p.stock}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+             {!editando && (
+  <div>
+    <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
+    <div className="flex gap-2 mb-2 flex-wrap">
+      {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
+        <button
+          key={tipo}
+          type="button"
+          onClick={() => setFiltroTipo(tipo)}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+            filtroTipo === tipo
+              ? 'bg-primary text-white'
+              : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+          }`}
+        >
+          {tipo === 'todos' ? 'Todos' :
+           tipo === 'alimento' ? 'Alimentos' :
+           tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+        </button>
+      ))}
+    </div>
+    <label className="text-sm text-foreground mb-1 block">Producto</label>
+    <select
+      value={form.producto}
+      onChange={e => setForm({...form, producto: e.target.value})}
+      className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition"
+    >
+      <option value="">
+        {productosFiltrados.length === 0
+          ? 'Este producto no existe en el catálogo'
+          : 'Seleccionar producto'}
+      </option>
+      {productosFiltrados.map(p => (
+        <option key={p._id} value={p._id}>
+          {p.nombre} — Stock actual: {p.stock}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
               <div>
                 <label className="text-sm text-foreground mb-1 block">Cantidad</label>
