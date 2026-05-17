@@ -13,6 +13,9 @@ const AuthLogin = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const params = new URLSearchParams(window.location.search)
+  const sesionExpirada = params.get('expired') === 'true'
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -38,6 +41,7 @@ const AuthLogin = () => {
   }
 
   return (
+
     <form className="mt-6" onSubmit={handleSubmit}>
       <div className="mb-4">
         <div className="mb-2 block">
@@ -80,7 +84,13 @@ const AuthLogin = () => {
           ¿Olvidaste tu contraseña?
         </Link>
       </div>
-
+      {sesionExpirada && (
+        <div className="bg-warning/10 border border-warning/30 rounded-lg px-4 py-3 mb-4">
+          <p className="text-warning text-sm text-center">
+            Tu sesión ha expirado. Por favor vuelve a iniciar sesión.
+          </p>
+        </div>
+      )}
       {error && (
         <p className="text-red-400 text-sm text-center mb-4">{error}</p>
       )}

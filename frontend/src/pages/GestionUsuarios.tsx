@@ -51,9 +51,40 @@ export default function GestionUsuarios() {
     cargarUsuarios()
   }, [])
 
+  const validarFormulario = () => {
+    if (form.nombre.trim().length < 3 || form.nombre.trim().length > 50) {
+      setFormError('El nombre debe tener entre 3 y 50 caracteres')
+      return false
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(form.nombre)) {
+      setFormError('El nombre solo puede contener letras y espacios')
+      return false
+    }
+    if (form.username.length < 4 || form.username.length > 20) {
+      setFormError('El usuario debe tener entre 4 y 20 caracteres')
+      return false
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(form.username)) {
+      setFormError('El usuario solo puede contener letras, números y guión bajo')
+      return false
+    }
+    const dominiosValidos = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com', 'live.com']
+    const dominio = form.email.split('@')[1]?.toLowerCase()
+    if (!dominio || !dominiosValidos.includes(dominio)) {
+      setFormError('El email debe ser de un dominio válido (gmail, hotmail, outlook...)')
+      return false
+    }
+    if (form.password.length < 8) {
+      setFormError('La contraseña debe tener al menos 8 caracteres')
+      return false
+    }
+    return true
+  }
+
   const handleCrear = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    if (!validarFormulario()) return
     setFormLoading(true)
     try {
       await axios.post(`${API}/usuarios`, form, { headers })
@@ -146,28 +177,33 @@ export default function GestionUsuarios() {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
-                        u.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-                      }`}>
-                        {u.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                      {u.bloqueado && (
-                        <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-warning/10 text-warning">
-                          Bloqueado
-                        </span>
-                      )}
-                    </div>
-                  </td>
+  <div className="flex flex-col gap-1">
+    {u.debeCambiarContrasena && u.activo ? (
+      <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-warning/10 text-warning">
+        Pendiente activación
+      </span>
+    ) : (
+      <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
+        u.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+      }`}>
+        {u.activo ? 'Activo' : 'Inactivo'}
+      </span>
+    )}
+    {u.bloqueado && (
+      <span className="text-xs px-2 py-1 rounded-full font-medium w-fit bg-error/10 text-error">
+        Bloqueado
+      </span>
+    )}
+  </div>
+</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEstado(u._id, !u.activo)}
-                        className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-                          u.activo
+                        className={`text-xs px-3 py-1.5 rounded-lg border transition ${u.activo
                             ? 'border-error text-error hover:bg-error/10'
                             : 'border-success text-success hover:bg-success/10'
-                        }`}
+                          }`}
                       >
                         {u.activo ? 'Desactivar' : 'Activar'}
                       </button>
@@ -208,7 +244,7 @@ export default function GestionUsuarios() {
                   type="text"
                   placeholder="Juan García"
                   value={form.nombre}
-                  onChange={e => setForm({...form, nombre: e.target.value})}
+                  onChange={e => setForm({ ...form, nombre: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm outline-none border border-border bg-transparent text-foreground focus:border-primary transition"
                 />
@@ -220,7 +256,7 @@ export default function GestionUsuarios() {
                   type="text"
                   placeholder="juangarcia"
                   value={form.username}
-                  onChange={e => setForm({...form, username: e.target.value})}
+                  onChange={e => setForm({ ...form, username: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm outline-none border border-border bg-transparent text-foreground focus:border-primary transition"
                 />
@@ -232,7 +268,7 @@ export default function GestionUsuarios() {
                   type="email"
                   placeholder="juan@sivweb.com"
                   value={form.email}
-                  onChange={e => setForm({...form, email: e.target.value})}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm outline-none border border-border bg-transparent text-foreground focus:border-primary transition"
                 />
@@ -244,7 +280,7 @@ export default function GestionUsuarios() {
                   type="password"
                   placeholder="••••••••"
                   value={form.password}
-                  onChange={e => setForm({...form, password: e.target.value})}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
                   required
                   className="w-full rounded-lg px-4 py-2.5 text-sm outline-none border border-border bg-transparent text-foreground focus:border-primary transition"
                 />
@@ -254,11 +290,11 @@ export default function GestionUsuarios() {
                 <label className="text-sm text-foreground mb-1 block">Rol</label>
                 <select
                   value={form.rol}
-                  onChange={e => setForm({...form, rol: e.target.value})}
+                  onChange={e => setForm({ ...form, rol: e.target.value })}
                   className="w-full rounded-lg px-4 py-2.5 text-sm outline-none border border-border bg-card text-foreground focus:border-primary transition"
                 >
                   <option value="vendedor">Vendedor</option>
-                  <option value="dueño">Dueño</option>
+                  <option value="admin">Admin BD</option>
                 </select>
               </div>
 
