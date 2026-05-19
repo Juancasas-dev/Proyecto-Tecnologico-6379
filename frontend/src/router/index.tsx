@@ -21,7 +21,7 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (!token()) return <Navigate to="/login" />
-  if (rol() !== 'admin') return <Navigate to="/dashboard" />
+  if (rol() !== 'admin') return <AccesoDenegado />
   return <>{children}</>
 }
 
@@ -50,6 +50,13 @@ const AccesoDenegado = () => (
 const NegocioRoute = ({ children }: { children: React.ReactNode }) => {
   if (!token()) return <Navigate to="/login" />
   if (rol() === 'admin') return <AccesoDenegado />
+  return <>{children}</>
+}
+
+const DuenoRoute = ({ children }: { children: React.ReactNode }) => {
+  if (!token()) return <Navigate to="/login" />
+  if (rol() === 'admin') return <AccesoDenegado />
+  if (rol() !== 'dueño') return <AccesoDenegado />
   return <>{children}</>
 }
 
@@ -83,9 +90,9 @@ export default function Router() {
             </NegocioRoute>
           } />
           <Route path="/dashboard/usuarios" element={
-            <NegocioRoute>
+            <DuenoRoute>
               <GestionUsuarios />
-            </NegocioRoute>
+            </DuenoRoute>
           } />
           <Route path="/dashboard/productos" element={
             <NegocioRoute>
