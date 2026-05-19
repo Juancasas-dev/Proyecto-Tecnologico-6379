@@ -200,18 +200,18 @@ export default function Mercaderia() {
                   </td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${new Date(ingreso.fechaVencimiento) < new Date()
-                        ? 'bg-error/10 text-error'
-                        : new Date(ingreso.fechaVencimiento) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-success/10 text-success'
+                      ? 'bg-error/10 text-error'
+                      : new Date(ingreso.fechaVencimiento) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                        ? 'bg-warning/10 text-warning'
+                        : 'bg-success/10 text-success'
                       }`}>
                       {formatearFecha(ingreso.fechaVencimiento)}
                     </span>
                   </td>
                   <td className="py-3 px-4">
                     <span className={`font-medium text-sm ${ingreso.producto?.stock === 0
-                        ? 'text-error'
-                        : 'text-success'
+                      ? 'text-error'
+                      : 'text-success'
                       }`}>
                       {ingreso.producto?.stock}
                     </span>
@@ -265,8 +265,8 @@ export default function Mercaderia() {
                         type="button"
                         onClick={() => setFiltroTipo(tipo)}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition ${filtroTipo === tipo
-                            ? 'bg-primary text-white'
-                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                          ? 'bg-primary text-white'
+                          : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
                           }`}
                       >
                         {tipo === 'todos' ? 'Todos' :
@@ -303,7 +303,7 @@ export default function Mercaderia() {
                   placeholder="0"
                   value={form.cantidad}
                   onChange={e => setForm({ ...form, cantidad: e.target.value })}
-                  required
+
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                 />
               </div>
@@ -315,7 +315,7 @@ export default function Mercaderia() {
                     type="date"
                     value={form.fechaIngreso}
                     onChange={e => setForm({ ...form, fechaIngreso: e.target.value })}
-                    required
+
                     className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                   />
                 </div>
@@ -327,7 +327,7 @@ export default function Mercaderia() {
                   type="date"
                   value={form.fechaVencimiento}
                   onChange={e => setForm({ ...form, fechaVencimiento: e.target.value })}
-                  required
+
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                 />
               </div>
