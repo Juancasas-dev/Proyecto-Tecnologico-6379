@@ -165,13 +165,20 @@ export const obtenerStock = async (req: Request, res: Response) => {
     const { productoId } = req.params
 
     const lotes = await Mercaderia.find({ 
-      producto: productoId as any,  // 👈 agrega as any
+      producto: productoId as any,
       cantidadRestante: { $gt: 0 }
-    })
+    }).select('cantidadRestante fechaVencimiento')
 
     const stockTotal = lotes.reduce((sum, lote) => sum + lote.cantidadRestante, 0)
 
-    res.json({ productoId, stockTotal, lotes: lotes.length })
+    res.json({ 
+      productoId, 
+      stockTotal, 
+      lotes: lotes.map(l => ({
+        cantidadRestante: l.cantidadRestante,
+        fechaVencimiento: l.fechaVencimiento
+      }))
+    })
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al calcular stock' })
   }

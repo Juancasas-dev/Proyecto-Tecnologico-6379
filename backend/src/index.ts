@@ -8,6 +8,7 @@ import categoriaRoutes from './routes/categoria.routes'
 import productoRoutes from './routes/producto.routes'
 import inventarioRoutes from './routes/inventario.routes'
 import backupRoutes from './routes/backup.routes'
+import demandaRoutes from './routes/demanda.routes'
 
 dotenv.config()
 connectDB()
@@ -22,5 +23,6 @@ app.use('/api/categorias', categoriaRoutes)
 app.use('/api/productos', productoRoutes)
 app.use('/api/inventario', inventarioRoutes) 
 app.use('/api/backup', backupRoutes)
+app.use('/api/demandas', demandaRoutes)
 
 app.listen(3000, () => console.log('Servidor en puerto 3000'))
