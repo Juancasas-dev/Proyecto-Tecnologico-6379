@@ -41,6 +41,12 @@ interface Producto {
     activo: boolean
 }
 
+interface LoteInfo {
+    productoId: string
+    estadoCaducidad: 'normal' | 'proximo' | 'vencido'
+    fechaVencimientoProxima: Date | null
+}
+
 const API = 'http://localhost:3000/api'
 const getToken = () => localStorage.getItem('token')
 const getUsuario = () => JSON.parse(localStorage.getItem('usuario') || '{}')
@@ -56,6 +62,7 @@ export default function CatalogoProductos() {
     const [productoEditando, setProductoEditando] = useState<Producto | null>(null)
     const [formError, setFormError] = useState('')
     const [formLoading, setFormLoading] = useState(false)
+    const [lotesPorProducto, setLotesPorProducto] = useState<Record<string, LoteInfo>>({})
     const [form, setForm] = useState({
         nombre: '', marca: '', categoria: '',
         tipo: '', precio: '', unidadMedida: '',
@@ -64,6 +71,7 @@ export default function CatalogoProductos() {
     })
     const [camposError, setCamposError] = useState<string[]>([])
     const [productoDuplicadoId, setProductoDuplicadoId] = useState<string | null>(null)
+
     const colorCategoria = (nombre: string) => {
         const colores: Record<string, string> = {
             'Perros': 'bg-blue-500/10 text-blue-400',
@@ -79,6 +87,34 @@ export default function CatalogoProductos() {
     const esDueno = usuario.rol === 'dueño'
     const headers = { Authorization: `Bearer ${getToken()}` }
 
+    const cargarCaducidad = async (prods: Producto[]) => {
+        const info: Record<string, LoteInfo> = {}
+        await Promise.all(
+            prods.map(async (p) => {
+                try {
+                    const { data } = await axios.get(`${API}/inventario/stock/${p._id}`, { headers })
+                    const hoy = new Date()
+                    const treintaDias = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000)
+                    let estado: 'normal' | 'proximo' | 'vencido' = 'normal'
+                    let fechaProxima = null
+
+                    if (data.lotes && data.lotes.length > 0) {
+                        const fechas = data.lotes
+                            .map((l: any) => new Date(l.fechaVencimiento))
+                            .sort((a: Date, b: Date) => a.getTime() - b.getTime())
+                        fechaProxima = fechas[0]
+                        if (fechas[0] < hoy) estado = 'vencido'
+                        else if (fechas[0] < treintaDias) estado = 'proximo'
+                    }
+                    info[p._id] = { productoId: p._id, estadoCaducidad: estado, fechaVencimientoProxima: fechaProxima }
+                } catch {
+                    info[p._id] = { productoId: p._id, estadoCaducidad: 'normal', fechaVencimientoProxima: null }
+                }
+            })
+        )
+        setLotesPorProducto(info)
+    }
+
     const cargarDatos = async () => {
         try {
             setLoading(true)
@@ -88,6 +124,7 @@ export default function CatalogoProductos() {
             ])
             setProductos(prodRes.data)
             setCategorias(catRes.data)
+            await cargarCaducidad(prodRes.data)
         } catch {
             console.error('Error al cargar datos')
         } finally {
@@ -127,7 +164,6 @@ export default function CatalogoProductos() {
         setCamposError([])
         setProductoDuplicadoId(null)
         setFormLoading(true)
-
 
         if (!productoEditando) {
             const vacios: string[] = []
@@ -172,6 +208,28 @@ export default function CatalogoProductos() {
             }
         } finally {
             setFormLoading(false)
+        }
+    }
+
+    const handleRegistrarDemanda = async (producto: Producto) => {
+        try {
+            await axios.post(`${API}/demandas`, {
+                producto: producto.nombre,
+                categoria: producto.categoria?.nombre,
+                stockActual: producto.stock
+            }, { headers })
+            alert('Demanda insatisfecha registrada correctamente')
+        } catch {
+            alert('Error al registrar demanda')
+        }
+    }
+
+    const handleEstadoProducto = async (id: string, activo: boolean) => {
+        try {
+            await axios.patch(`${API}/productos/${id}/estado`, { activo }, { headers })
+            cargarDatos()
+        } catch {
+            alert('Error al cambiar estado del producto')
         }
     }
 
@@ -230,15 +288,44 @@ export default function CatalogoProductos() {
             accessorKey: 'stock',
             header: 'Stock',
             cell: ({ row }) => (
-                <span className={`font-medium text-sm ${row.original.stock === 0
-                    ? 'text-error'
-                    : row.original.stock <= row.original.nivelMinimo
-                        ? 'text-warning'
-                        : 'text-success'
+                <div className="flex flex-col gap-1">
+                    <span className={`font-medium text-sm ${
+                        row.original.stock === 0
+                            ? 'text-error'
+                            : row.original.stock <= row.original.nivelMinimo
+                            ? 'text-warning'
+                            : 'text-success'
                     }`}>
-                    {row.original.stock}
-                </span>
+                        {row.original.stock === 0 ? 'Sin stock' : row.original.stock}
+                    </span>
+                    {row.original.stock === 0 && (
+                        <button
+                            onClick={() => handleRegistrarDemanda(row.original)}
+                            className="text-xs bg-error/10 text-error border border-error/20 px-2 py-1 rounded-md hover:bg-error/20 transition whitespace-nowrap"
+                        >
+                            Registrar demanda
+                        </button>
+                    )}
+                </div>
             )
+        },
+        {
+            id: 'caducidad',
+            header: 'Caducidad',
+            cell: ({ row }) => {
+                const info = lotesPorProducto[row.original._id]
+                if (!info || row.original.stock === 0) return <span className="text-muted-foreground text-xs">—</span>
+                return (
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        info.estadoCaducidad === 'vencido' ? 'bg-error/10 text-error' :
+                        info.estadoCaducidad === 'proximo' ? 'bg-warning/10 text-warning' :
+                        'bg-success/10 text-success'
+                    }`}>
+                        {info.estadoCaducidad === 'vencido' ? 'Vencido' :
+                         info.estadoCaducidad === 'proximo' ? 'Próx. vencer' : 'Normal'}
+                    </span>
+                )
+            }
         },
         {
             accessorKey: 'nivelMinimo',
@@ -251,10 +338,9 @@ export default function CatalogoProductos() {
             accessorKey: 'activo',
             header: 'Estado',
             cell: ({ row }) => (
-                <Badge className={`text-xs px-2 py-1 rounded-full ${row.original.activo
-                    ? 'bg-success/10 text-success'
-                    : 'bg-error/10 text-error'
-                    }`}>
+                <Badge className={`text-xs px-2 py-1 rounded-full ${
+                    row.original.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                }`}>
                     {row.original.activo ? 'Activo' : 'Inactivo'}
                 </Badge>
             )
@@ -272,17 +358,18 @@ export default function CatalogoProductos() {
                     </button>
                     <button
                         onClick={() => handleEstadoProducto(row.original._id, !row.original.activo)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition ${row.original.activo
-                            ? 'bg-error/10 text-error hover:bg-error/20'
-                            : 'bg-success/10 text-success hover:bg-success/20'
-                            }`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
+                            row.original.activo
+                                ? 'bg-error/10 text-error hover:bg-error/20'
+                                : 'bg-success/10 text-success hover:bg-success/20'
+                        }`}
                     >
                         <Icon icon={row.original.activo ? 'solar:eye-closed-linear' : 'solar:eye-linear'} height={16} />
                     </button>
                 </div>
             )
         }] : [])
-    ], [esDueno])
+    ], [esDueno, lotesPorProducto])
 
     const productosFiltrados = useMemo(() => {
         return filtroTipo === 'todos'
@@ -303,15 +390,6 @@ export default function CatalogoProductos() {
         getPaginationRowModel: getPaginationRowModel(),
         initialState: { pagination: { pageSize: 10 } }
     })
-
-    const handleEstadoProducto = async (id: string, activo: boolean) => {
-        try {
-            await axios.patch(`${API}/productos/${id}/estado`, { activo }, { headers })
-            cargarDatos()
-        } catch {
-            alert('Error al cambiar estado del producto')
-        }
-    }
 
     return (
         <div>
@@ -340,14 +418,15 @@ export default function CatalogoProductos() {
                     <button
                         key={tipo}
                         onClick={() => setFiltroTipo(tipo)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${filtroTipo === tipo
-                            ? 'bg-primary text-white'
-                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                            }`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+                            filtroTipo === tipo
+                                ? 'bg-primary text-white'
+                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                        }`}
                     >
                         {tipo === 'todos' ? 'Todos' :
                             tipo === 'alimento' ? 'Alimentos' :
-                                tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+                            tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
                     </button>
                 ))}
             </div>
@@ -408,8 +487,28 @@ export default function CatalogoProductos() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={columns.length} className="text-center py-8 text-muted-foreground">
-                                        No se encontraron productos
+                                    <TableCell colSpan={columns.length} className="text-center py-8">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <p className="text-muted-foreground">
+                                                No se encontraron productos con ese nombre o código
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    if (globalFilter) {
+                                                        axios.post(`${API}/demandas`, {
+                                                            producto: globalFilter,
+                                                            categoria: '',
+                                                            stockActual: 0
+                                                        }, { headers })
+                                                        .then(() => alert('Producto registrado como demanda insatisfecha'))
+                                                        .catch(() => alert('Error al registrar demanda'))
+                                                    }
+                                                }}
+                                                className="text-sm bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/20 transition"
+                                            >
+                                                ¿Deseas registrar este producto como demanda insatisfecha?
+                                            </button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -434,11 +533,9 @@ export default function CatalogoProductos() {
                                 Siguiente
                             </button>
                         </div>
-
                         <span className="text-sm text-muted-foreground">
                             Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
                         </span>
-
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">Filas:</span>
                             <Select
@@ -473,14 +570,12 @@ export default function CatalogoProductos() {
                         </div>
 
                         <form onSubmit={handleGuardar} className="flex flex-col gap-4">
-
                             {!productoEditando && (
                                 <>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Tipo de producto</label>
                                         <select value={form.tipoProducto} onChange={e => setForm({ ...form, tipoProducto: e.target.value })}
-                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('tipoProducto') ? 'border-error' : 'border-border focus:border-primary'
-                                                }`}>
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('tipoProducto') ? 'border-error' : 'border-border focus:border-primary'}`}>
                                             <option value="">Seleccionar</option>
                                             <option value="alimento">Alimento</option>
                                             <option value="medicamento">Medicamento</option>
@@ -491,21 +586,18 @@ export default function CatalogoProductos() {
                                         <label className="text-sm text-foreground mb-1 block">Nombre</label>
                                         <input type="text" placeholder="Ricocan Adultos..." value={form.nombre}
                                             onChange={e => setForm({ ...form, nombre: e.target.value })}
-                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('nombre') ? 'border-error' : 'border-border focus:border-primary'
-                                                }`} />
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('nombre') ? 'border-error' : 'border-border focus:border-primary'}`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Marca</label>
                                         <input type="text" placeholder="Ricocan" value={form.marca}
                                             onChange={e => setForm({ ...form, marca: e.target.value })}
-                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('marca') ? 'border-error' : 'border-border focus:border-primary'
-                                                }`} />
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('marca') ? 'border-error' : 'border-border focus:border-primary'}`} />
                                     </div>
                                     <div>
                                         <label className="text-sm text-foreground mb-1 block">Categoría</label>
                                         <select value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}
-                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('categoria') ? 'border-error' : 'border-border focus:border-primary'
-                                                }`}>
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('categoria') ? 'border-error' : 'border-border focus:border-primary'}`}>
                                             <option value="">Seleccionar categoría</option>
                                             {categorias.map(c => (
                                                 <option key={c._id} value={c._id}>{c.nombre}</option>
@@ -516,15 +608,13 @@ export default function CatalogoProductos() {
                                         <label className="text-sm text-foreground mb-1 block">Tipo</label>
                                         <input type="text" placeholder="Adulto, Cachorro..." value={form.tipo}
                                             onChange={e => setForm({ ...form, tipo: e.target.value })}
-                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('tipo') ? 'border-error' : 'border-border focus:border-primary'
-                                                }`} />
+                                            className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('tipo') ? 'border-error' : 'border-border focus:border-primary'}`} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-sm text-foreground mb-1 block">Presentación</label>
                                             <select value={form.presentacion} onChange={e => setForm({ ...form, presentacion: e.target.value })}
-                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('presentacion') ? 'border-error' : 'border-border focus:border-primary'
-                                                    }`}>
+                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-card text-foreground outline-none transition ${camposError.includes('presentacion') ? 'border-error' : 'border-border focus:border-primary'}`}>
                                                 <option value="">Seleccionar</option>
                                                 <option value="Bolsa">Bolsa</option>
                                                 <option value="Saco">Saco</option>
@@ -535,8 +625,7 @@ export default function CatalogoProductos() {
                                             <label className="text-sm text-foreground mb-1 block">Unidad de medida</label>
                                             <input type="text" placeholder="3 kg, 500 g..." value={form.unidadMedida}
                                                 onChange={e => setForm({ ...form, unidadMedida: e.target.value })}
-                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('unidadMedida') ? 'border-error' : 'border-border focus:border-primary'
-                                                    }`} />
+                                                className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('unidadMedida') ? 'border-error' : 'border-border focus:border-primary'}`} />
                                         </div>
                                     </div>
                                 </>
@@ -547,8 +636,7 @@ export default function CatalogoProductos() {
                                     <label className="text-sm text-foreground mb-1 block">Precio (S/)</label>
                                     <input type="number" step="0.1" placeholder="0.00" value={form.precio}
                                         onChange={e => setForm({ ...form, precio: e.target.value })}
-                                        className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('precio') ? 'border-error' : 'border-border focus:border-primary'
-                                            }`} />
+                                        className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${camposError.includes('precio') ? 'border-error' : 'border-border focus:border-primary'}`} />
                                 </div>
                                 <div>
                                     <label className="text-sm text-foreground mb-1 block">Nivel mínimo</label>
