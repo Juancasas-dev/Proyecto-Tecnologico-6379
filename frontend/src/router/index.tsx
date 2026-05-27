@@ -11,6 +11,7 @@ import CatalogoProductos from '../pages/CatalogoProductos'
 import Mercaderia from '../pages/Mercaderia'
 import CambiarContrasena from '../pages/CambiarContrasena'
 import Respaldo from '../pages/Respaldo'
+import Categorias from '../pages/Categorias'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -102,6 +103,11 @@ export default function Router() {
           <Route path="/dashboard/mercaderia" element={
             <NegocioRoute>
               <Mercaderia />
+            </NegocioRoute>
+          } />
+          <Route path="/dashboard/categorias" element={
+            <NegocioRoute>
+              <Categorias />
             </NegocioRoute>
           } />
           <Route path="/dashboard/*" element={
