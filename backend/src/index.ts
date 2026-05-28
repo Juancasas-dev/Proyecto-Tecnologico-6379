@@ -9,9 +9,12 @@ import productoRoutes from './routes/producto.routes'
 import inventarioRoutes from './routes/inventario.routes'
 import backupRoutes from './routes/backup.routes'
 import demandaRoutes from './routes/demanda.routes'
-
+import ventaRoutes from './routes/venta.routes'
+import { Venta } from './models/venta.model' 
 dotenv.config()
-connectDB()
+connectDB().then(() => {
+  Venta.syncIndexes()  
+})
 
 const app = express()
 app.use(cors())
@@ -24,5 +27,6 @@ app.use('/api/productos', productoRoutes)
 app.use('/api/inventario', inventarioRoutes) 
 app.use('/api/backup', backupRoutes)
 app.use('/api/demandas', demandaRoutes)
+app.use('/api/ventas', ventaRoutes)
 
 app.listen(3000, () => console.log('Servidor en puerto 3000'))
