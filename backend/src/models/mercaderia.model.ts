@@ -35,9 +35,10 @@ const MercaderiaSchema = new Schema<IMercaderia>({
   },
 
   fechaVencimiento: {
-    type: Date,
-    required: true
-  },
+  type: Date,
+  required: false,
+  default: null
+},
 
   creadoPor: {
     type: Schema.Types.ObjectId,
