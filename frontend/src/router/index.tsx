@@ -12,6 +12,8 @@ import Mercaderia from '../pages/Mercaderia'
 import CambiarContrasena from '../pages/CambiarContrasena'
 import Respaldo from '../pages/Respaldo'
 import Categorias from '../pages/Categorias'
+import Ventas from '../pages/Ventas'
+import HistorialVentas from '../pages/HistorialVentas'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -108,6 +110,16 @@ export default function Router() {
           <Route path="/dashboard/categorias" element={
             <NegocioRoute>
               <Categorias />
+            </NegocioRoute>
+          } />
+          <Route path="/dashboard/ventas" element={
+            <NegocioRoute>
+              <Ventas />
+            </NegocioRoute>
+          } />
+          <Route path="/dashboard/historial-ventas" element={
+            <NegocioRoute>
+              <HistorialVentas />
             </NegocioRoute>
           } />
           <Route path="/dashboard/*" element={

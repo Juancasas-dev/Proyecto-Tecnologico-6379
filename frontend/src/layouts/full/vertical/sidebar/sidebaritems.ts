@@ -51,6 +51,23 @@ const SidebarContent: MenuItem[] = [
       },
     ],
   },
+   {
+    heading: 'VENTAS',        
+    children: [
+      {
+        name: 'Registrar venta',
+        icon: 'solar:cart-large-2-linear',
+        id: uniqueId(),
+        url: '/dashboard/ventas',
+      },
+      {
+        name: 'Historial',
+        icon: 'solar:history-linear',
+        id: uniqueId(),
+        url: '/dashboard/historial-ventas',
+      },
+    ],
+  },
   {
     heading: 'GESTIÓN',
     children: [
