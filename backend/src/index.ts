@@ -11,9 +11,13 @@ import backupRoutes from './routes/backup.routes'
 import demandaRoutes from './routes/demanda.routes'
 import ventaRoutes from './routes/venta.routes'
 import { Venta } from './models/venta.model' 
+import alertaRoutes from './routes/alerta.routes'
+import { iniciarAlertasCron } from './services/alerta-cron.service'
+
 dotenv.config()
 connectDB().then(() => {
-  Venta.syncIndexes()  
+  Venta.syncIndexes() 
+   iniciarAlertasCron()  
 })
 
 const app = express()
@@ -28,5 +32,5 @@ app.use('/api/inventario', inventarioRoutes)
 app.use('/api/backup', backupRoutes)
 app.use('/api/demandas', demandaRoutes)
 app.use('/api/ventas', ventaRoutes)
-
+app.use('/api/alertas', alertaRoutes)
 app.listen(3000, () => console.log('Servidor en puerto 3000'))

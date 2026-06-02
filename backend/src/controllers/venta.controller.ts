@@ -4,6 +4,7 @@ import { Venta } from '../models/venta.model'
 import { Producto } from '../models/producto.model'
 import { Mercaderia } from '../models/mercaderia.model'
 import { HistorialInventario } from '../models/historialInventario.model'
+import { Alerta } from '../models/alerta.model'
 
 export const registrarVenta = async (req: Request, res: Response) => {
     const session = await mongoose.startSession()
@@ -108,6 +109,25 @@ export const registrarVenta = async (req: Request, res: Response) => {
                     fecha: new Date(),
                     observaciones: `Venta registrada - ${tipoPago}`
                 }], { session })
+                if (producto.stock <= producto.nivelMinimo) {
+                    const alertaExistente = await Alerta.findOne({
+                        producto: item.producto,
+                        activa: true,
+                        tipo: 'stock_bajo'
+                    }).session(session)
+
+                    if (alertaExistente) {
+                        alertaExistente.stockActual = producto.stock
+                        await alertaExistente.save({ session })
+                    } else {
+                        await (Alerta as any).create([{
+                            producto: item.producto,
+                            stockActual: producto.stock,
+                            nivelMinimo: producto.nivelMinimo,
+                            tipo: 'stock_bajo'
+                        }], { session })
+                    }
+                }
             }
         }
 

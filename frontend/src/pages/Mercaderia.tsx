@@ -91,9 +91,14 @@ export default function Mercaderia() {
   const handleGuardar = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
-    if (form.fechaVencimiento && new Date(form.fechaVencimiento) < new Date()) {
-      setFormError('La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.')
-      return
+    if (form.fechaVencimiento) {
+      const fechaVenc = new Date(form.fechaVencimiento)
+      const hoy = new Date()
+      hoy.setHours(0, 0, 0, 0)
+      if (fechaVenc < hoy) {
+        setFormError('La fecha de vencimiento ingresada ya pasó. Verifica la fecha antes de continuar.')
+        return
+      }
     }
     setFormLoading(true)
     try {
@@ -310,24 +315,28 @@ export default function Mercaderia() {
 
               {!editando && (
                 <div>
-                  <label className="text-sm text-foreground mb-1 block">Fecha de ingreso</label>
-                  <input
-                    type="date"
-                    value={form.fechaIngreso}
-                    onChange={e => setForm({ ...form, fechaIngreso: e.target.value })}
-
-                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
-                  />
-                </div>
+  <label className="text-sm text-foreground mb-1 block">Fecha de ingreso</label>
+  <input
+    type="date"
+    value={form.fechaIngreso ? form.fechaIngreso.split('T')[0] : ''}
+    onChange={e => {
+      const fecha = e.target.value
+      setForm({ ...form, fechaIngreso: fecha ? `${fecha}T05:00:00.000Z` : '' })
+    }}
+    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
+  />
+</div>
               )}
 
               <div>
                 <label className="text-sm text-foreground mb-1 block">Fecha de vencimiento</label>
                 <input
                   type="date"
-                  value={form.fechaVencimiento}
-                  onChange={e => setForm({ ...form, fechaVencimiento: e.target.value })}
-
+                  value={form.fechaVencimiento.split('T')[0]}
+                  onChange={e => {
+                    const fecha = e.target.value
+                    setForm({ ...form, fechaVencimiento: fecha ? `${fecha}T05:00:00.000Z` : '' })
+                  }}
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
                 />
               </div>
