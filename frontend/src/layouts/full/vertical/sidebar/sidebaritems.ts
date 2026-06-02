@@ -44,15 +44,15 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/mercaderia',
       },
       {
-        name: 'Ajustes',
-        icon: 'solar:settings-linear',
+        name: 'Alertas',
+        icon: 'solar:bell-linear',
         id: uniqueId(),
-        url: '/dashboard/ajustes',
+        url: '/dashboard/alertas',
       },
     ],
   },
-   {
-    heading: 'VENTAS',        
+  {
+    heading: 'VENTAS',
     children: [
       {
         name: 'Registrar venta',
