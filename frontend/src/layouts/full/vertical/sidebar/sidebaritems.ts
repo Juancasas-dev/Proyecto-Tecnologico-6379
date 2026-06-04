@@ -83,6 +83,12 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         url: '/dashboard/reportes',
       },
+      {
+        name: 'Demandas',
+        icon: 'solar:clipboard-list-linear',
+        id: uniqueId(),
+        url: '/dashboard/demandas',
+      },
     ],
   },
   {
