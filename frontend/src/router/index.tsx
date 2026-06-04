@@ -15,6 +15,8 @@ import Categorias from '../pages/Categorias'
 import Ventas from '../pages/Ventas'
 import HistorialVentas from '../pages/HistorialVentas'
 import Alertas from '../pages/Alertas'
+import Demandas from '../pages/Demandas'
+
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -112,6 +114,11 @@ export default function Router() {
             <NegocioRoute>
               <Categorias />
             </NegocioRoute>
+          } />
+          <Route path="/dashboard/demandas" element={
+            <DuenoRoute>
+              <Demandas />
+            </DuenoRoute>
           } />
           <Route path="/dashboard/alertas" element={
             <NegocioRoute>

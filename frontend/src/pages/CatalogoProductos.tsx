@@ -87,6 +87,10 @@ export default function CatalogoProductos() {
     const esDueno = usuario.rol === 'dueño'
     const headers = { Authorization: `Bearer ${getToken()}` }
 
+    const [modalDemanda, setModalDemanda] = useState(false)
+    const [formDemanda, setFormDemanda] = useState({ producto: '', categoria: '' })
+    const [errorDemanda, setErrorDemanda] = useState('')
+
     const cargarCaducidad = async (prods: Producto[]) => {
         const info: Record<string, LoteInfo> = {}
         await Promise.all(
@@ -215,12 +219,14 @@ export default function CatalogoProductos() {
         try {
             await axios.post(`${API}/demandas`, {
                 producto: producto.nombre,
+                productoId: producto._id,
                 categoria: producto.categoria?.nombre,
                 stockActual: producto.stock
             }, { headers })
             alert('Demanda insatisfecha registrada correctamente')
-        } catch {
-            alert('Error al registrar demanda')
+        } catch (error: any) {
+            const mensaje = error.response?.data?.mensaje
+            alert(mensaje || 'Error al registrar demanda')
         }
     }
 
@@ -289,13 +295,12 @@ export default function CatalogoProductos() {
             header: 'Stock',
             cell: ({ row }) => (
                 <div className="flex flex-col gap-1">
-                    <span className={`font-medium text-sm ${
-                        row.original.stock === 0
-                            ? 'text-error'
-                            : row.original.stock <= row.original.nivelMinimo
+                    <span className={`font-medium text-sm ${row.original.stock === 0
+                        ? 'text-error'
+                        : row.original.stock <= row.original.nivelMinimo
                             ? 'text-warning'
                             : 'text-success'
-                    }`}>
+                        }`}>
                         {row.original.stock === 0 ? 'Sin stock' : row.original.stock}
                     </span>
                     {row.original.stock === 0 && (
@@ -316,13 +321,12 @@ export default function CatalogoProductos() {
                 const info = lotesPorProducto[row.original._id]
                 if (!info || row.original.stock === 0) return <span className="text-muted-foreground text-xs">—</span>
                 return (
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                        info.estadoCaducidad === 'vencido' ? 'bg-error/10 text-error' :
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${info.estadoCaducidad === 'vencido' ? 'bg-error/10 text-error' :
                         info.estadoCaducidad === 'proximo' ? 'bg-warning/10 text-warning' :
-                        'bg-success/10 text-success'
-                    }`}>
+                            'bg-success/10 text-success'
+                        }`}>
                         {info.estadoCaducidad === 'vencido' ? 'Vencido' :
-                         info.estadoCaducidad === 'proximo' ? 'Próx. vencer' : 'Normal'}
+                            info.estadoCaducidad === 'proximo' ? 'Próx. vencer' : 'Normal'}
                     </span>
                 )
             }
@@ -338,9 +342,8 @@ export default function CatalogoProductos() {
             accessorKey: 'activo',
             header: 'Estado',
             cell: ({ row }) => (
-                <Badge className={`text-xs px-2 py-1 rounded-full ${
-                    row.original.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-                }`}>
+                <Badge className={`text-xs px-2 py-1 rounded-full ${row.original.activo ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                    }`}>
                     {row.original.activo ? 'Activo' : 'Inactivo'}
                 </Badge>
             )
@@ -358,11 +361,10 @@ export default function CatalogoProductos() {
                     </button>
                     <button
                         onClick={() => handleEstadoProducto(row.original._id, !row.original.activo)}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition ${
-                            row.original.activo
-                                ? 'bg-error/10 text-error hover:bg-error/20'
-                                : 'bg-success/10 text-success hover:bg-success/20'
-                        }`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition ${row.original.activo
+                            ? 'bg-error/10 text-error hover:bg-error/20'
+                            : 'bg-success/10 text-success hover:bg-success/20'
+                            }`}
                     >
                         <Icon icon={row.original.activo ? 'solar:eye-closed-linear' : 'solar:eye-linear'} height={16} />
                     </button>
@@ -418,15 +420,14 @@ export default function CatalogoProductos() {
                     <button
                         key={tipo}
                         onClick={() => setFiltroTipo(tipo)}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                            filtroTipo === tipo
-                                ? 'bg-primary text-white'
-                                : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                        }`}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${filtroTipo === tipo
+                            ? 'bg-primary text-white'
+                            : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
+                            }`}
                     >
                         {tipo === 'todos' ? 'Todos' :
                             tipo === 'alimento' ? 'Alimentos' :
-                            tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+                                tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
                     </button>
                 ))}
             </div>
@@ -492,22 +493,18 @@ export default function CatalogoProductos() {
                                             <p className="text-muted-foreground">
                                                 No se encontraron productos con ese nombre o código
                                             </p>
-                                            <button
-                                                onClick={() => {
-                                                    if (globalFilter) {
-                                                        axios.post(`${API}/demandas`, {
-                                                            producto: globalFilter,
-                                                            categoria: '',
-                                                            stockActual: 0
-                                                        }, { headers })
-                                                        .then(() => alert('Producto registrado como demanda insatisfecha'))
-                                                        .catch(() => alert('Error al registrar demanda'))
-                                                    }
-                                                }}
-                                                className="text-sm bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/20 transition"
-                                            >
-                                                ¿Deseas registrar este producto como demanda insatisfecha?
-                                            </button>
+                                            {usuario.rol === 'vendedor' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setFormDemanda({ producto: globalFilter, categoria: '' })
+                                                        setErrorDemanda('')
+                                                        setModalDemanda(true)
+                                                    }}
+                                                    className="text-sm bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg hover:bg-primary/20 transition"
+                                                >
+                                                    Registrar como demanda insatisfecha
+                                                </button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -670,6 +667,82 @@ export default function CatalogoProductos() {
                                 {formLoading ? 'Guardando...' : productoEditando ? 'Actualizar' : 'Crear producto'}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal demanda insatisfecha */}
+            {modalDemanda && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-5">
+                            <h2 className="text-lg font-semibold text-foreground">
+                                Registrar demanda insatisfecha
+                            </h2>
+                            <button
+                                onClick={() => setModalDemanda(false)}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <Icon icon="solar:close-circle-linear" height={22} />
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">
+                                    Nombre del producto <span className="text-error">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formDemanda.producto}
+                                    onChange={e => setFormDemanda({ ...formDemanda, producto: e.target.value })}
+                                    placeholder="Nombre del producto solicitado"
+                                    className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${errorDemanda ? 'border-error' : 'border-border focus:border-primary'
+                                        }`}
+                                />
+                                {errorDemanda && (
+                                    <p className="text-error text-xs mt-1">{errorDemanda}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">
+                                    Categoría <span className="text-muted-foreground">(opcional)</span>
+                                </label>
+                                <select
+                                    value={formDemanda.categoria}
+                                    onChange={e => setFormDemanda({ ...formDemanda, categoria: e.target.value })}
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition"
+                                >
+                                    <option value="">Seleccionar categoría</option>
+                                    {categorias.map(c => (
+                                        <option key={c._id} value={c.nombre}>{c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={async () => {
+                                    if (!formDemanda.producto.trim()) {
+                                        setErrorDemanda('El nombre del producto es obligatorio para guardar el registro')
+                                        return
+                                    }
+                                    try {
+                                        await axios.post(`${API}/demandas`, {
+                                            producto: formDemanda.producto,
+                                            categoria: formDemanda.categoria,
+                                            stockActual: 0
+                                        }, { headers })
+                                        setModalDemanda(false)
+                                        alert('Demanda registrada correctamente')
+                                    } catch (error: any) {
+                                        setErrorDemanda(error.response?.data?.mensaje || 'Error al registrar demanda')
+                                    }
+                                }}
+                                className="w-full h-11 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primaryemphasis transition"
+                            >
+                                Registrar demanda
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
