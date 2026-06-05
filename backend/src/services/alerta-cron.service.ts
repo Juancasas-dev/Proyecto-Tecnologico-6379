@@ -49,8 +49,33 @@ const verificarVencimientos = async () => {
         tipo: 'vencido'
       })
     }
+    const lotesVigentesVencidos = await Mercaderia.findOne({
+      producto: lote.producto as any,
+      cantidadRestante: { $gt: 0 },
+      fechaVencimiento: { $lt: hoy }
+    })
+    if (!lotesVigentesVencidos) {
+      await Alerta.updateOne(
+        { producto: lote.producto, tipo: 'vencido', activa: true },
+        { activa: false }
+      )
+    }
   }
-
+   const productosConAlertaProximo = await Alerta.find({ tipo: 'proximo_vencer', activa: true })
+  for (const alerta of productosConAlertaProximo) {
+    const loteProximo = await Mercaderia.findOne({
+      producto: alerta.producto as any,
+      cantidadRestante: { $gt: 0 },
+      fechaVencimiento: { $gte: hoy, $lte: veinteDias }
+    })
+    if (!loteProximo) {
+      await Alerta.updateOne(
+        { _id: alerta._id },
+        { activa: false }
+      )
+    }
+  }
+  
   console.log('Alertas de vencimiento verificadas')
 }
 

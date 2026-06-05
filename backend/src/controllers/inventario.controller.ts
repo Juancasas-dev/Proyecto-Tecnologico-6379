@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { Mercaderia } from '../models/mercaderia.model'
 import { Producto } from '../models/producto.model'
 import { HistorialInventario } from '../models/historialInventario.model'
-
+import { Alerta } from '../models/alerta.model' 
 
 export const registrarIngreso = async (req: Request, res: Response) => {
   try {
@@ -47,6 +47,13 @@ export const registrarIngreso = async (req: Request, res: Response) => {
     productoExiste.stock = (productoExiste.stock || 0) + Number(cantidad)
     await productoExiste.save()
 
+    if (productoExiste.stock > productoExiste.nivelMinimo) {
+      await Alerta.updateOne(
+        { producto: productoExiste._id, tipo: 'stock_bajo', activa: true },
+        { activa: false }
+      )
+    }
+    
     await HistorialInventario.create({
   productoId: producto,
   tipo: 'ingreso',
