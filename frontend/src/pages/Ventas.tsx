@@ -47,11 +47,13 @@ export default function Ventas() {
 
     const headers = { Authorization: `Bearer ${getToken()}` }
 
+    const regexBoleta = /^[BF]\d{3}-\d{8}$/
+
     useEffect(() => {
         cargarProductos()
     }, [])
 
-    // countdown tras venta exitosa
+
     useEffect(() => {
         if (!ventaExitosa) return
         if (contador === 0) {
@@ -178,6 +180,11 @@ export default function Ventas() {
             return
         }
 
+        if (!regexBoleta.test(numeroBoleta)) {
+            setError('Formato inválido. Usa el formato B001-00001234 o F001-00001234')
+            return
+        }
+
         setProcesando(true)
         setError('')
 
@@ -256,10 +263,10 @@ export default function Ventas() {
                             <div
                                 key={producto._id}
                                 className={`bg-card border rounded-lg p-4 cursor-pointer transition ${lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido'
-                                        ? 'border-error hover:border-error/80'
-                                        : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
-                                            ? 'border-warning hover:border-warning/80'
-                                            : 'border-border hover:border-primary'
+                                    ? 'border-error hover:border-error/80'
+                                    : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
+                                        ? 'border-warning hover:border-warning/80'
+                                        : 'border-border hover:border-primary'
                                     }`}
                                 onClick={() => agregarAlCarrito(producto)}
                             >
@@ -275,13 +282,13 @@ export default function Ventas() {
                                         S/ {producto.precio.toFixed(2)}
                                     </span>
                                     <span className={`text-xs ${producto.stock === 0 ? 'text-error' :
-                                            producto.stock <= 5 ? 'text-warning' : 'text-success'
+                                        producto.stock <= 5 ? 'text-warning' : 'text-success'
                                         }`}>
                                         Stock: {producto.stock}
                                     </span>
                                 </div>
 
-                                {/* 👈 agrega aquí */}
+
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' && (
                                     <span className="text-xs text-error font-medium">Vence en menos de 2 semanas</span>
                                 )}
@@ -387,11 +394,11 @@ export default function Ventas() {
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="Ej: B001-00001234"
+                                    placeholder="B001-00001234 o F001-00001234"
                                     value={numeroBoleta}
-                                    onChange={e => setNumeroBoleta(e.target.value)}
-                                    maxLength={20}
-                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
+                                    onChange={e => setNumeroBoleta(e.target.value.toUpperCase())}
+                                    maxLength={13}
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border-2 border-primary/40 bg-transparent text-foreground outline-none focus:border-primary transition placeholder:text-muted-foreground/60"
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Puedes completarlo ahora o después de la venta
