@@ -30,7 +30,7 @@ const VentaSchema = new Schema<IVenta>({
   items:        { type: [ProductoVentaSchema], required: true },
   total:        { type: Number, required: true },
   tipoPago:     { type: String, enum: ['efectivo', 'transferencia'], required: true },
-    numeroBoleta: { type: String, required: true, maxlength: 20 },
+  numeroBoleta: { type: String, required: true,  match: [/^[BF]\d{3}-\d{8}$/, 'Formato de boleta inválido. Usa el formato B001-00001234 o F001-00001234'], maxlength: 13 },
   vendedor:     { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
   fecha:        { type: Date, default: Date.now },
   estado:       { type: String, enum: ['completada', 'anulada'], default: 'completada' }
