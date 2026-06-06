@@ -89,6 +89,12 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         url: '/dashboard/demandas',
       },
+      {
+        name: 'Ajustes',
+        icon: 'solar:settings-linear',
+        id: uniqueId(),
+        url: '/dashboard/ajustes',
+      },
     ],
   },
   {

@@ -5,7 +5,8 @@ import {
   eliminarIngreso,
   actualizarIngreso,
   obtenerIngresoPorId,
-  obtenerStock          
+  obtenerStock,          
+  ajustarInventario
 } from '../controllers/inventario.controller'
 import { verificarToken } from '../middlewares/auth.middleware'
 import { verificarRol } from '../middlewares/rol.middleware'  
@@ -18,5 +19,6 @@ router.get('/stock/:productoId', verificarToken, obtenerStock)
 router.get('/ingresos/:id',    verificarToken, verificarRol('dueño', 'vendedor'), obtenerIngresoPorId)
 router.put('/ingresos/:id',    verificarToken, verificarRol('dueño'), actualizarIngreso)
 router.delete('/ingresos/:id', verificarToken, verificarRol('dueño'), eliminarIngreso)
+router.post('/ajustes',verificarToken,verificarRol('dueño'),ajustarInventario)
 
 export default router
