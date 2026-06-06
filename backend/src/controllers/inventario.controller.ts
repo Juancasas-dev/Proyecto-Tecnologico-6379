@@ -190,3 +190,71 @@ export const obtenerStock = async (req: Request, res: Response) => {
     res.status(500).json({ mensaje: 'Error al calcular stock' })
   }
 }
+
+export const ajustarInventario = async (req: Request, res: Response) => {
+  try {
+    const { productoId, tipo, cantidad, causa } = req.body
+    const usuario = (req as any).usuario
+
+    if (!causa) {
+      return res.status(400).json({
+        mensaje: 'Debes seleccionar la causa del ajuste para continuar. Este campo es obligatorio.'
+      })
+    }
+
+    const producto = await Producto.findById(productoId)
+    if (!producto) {
+      return res.status(404).json({ mensaje: 'Producto no encontrado' })
+    }
+
+    const stockAnterior = producto.stock
+    const valorEconomico = Number(cantidad) * producto.precio  // 👈 agrega
+
+    if (tipo === 'salida') {
+      if (producto.stock < Number(cantidad)) {
+        return res.status(400).json({
+          mensaje: 'No hay stock suficiente para realizar el ajuste'
+        })
+      }
+      producto.stock -= Number(cantidad)
+
+    } else if (tipo === 'entrada') {
+      producto.stock += Number(cantidad)
+
+      await Mercaderia.create({
+        producto: productoId,
+        cantidad: Number(cantidad),
+        cantidadRestante: Number(cantidad),
+        fechaIngreso: new Date(),
+        fechaVencimiento: null as any, 
+        creadoPor: usuario?.id || null
+      })
+
+    } else {
+      return res.status(400).json({ mensaje: 'Tipo de ajuste inválido' })
+    }
+
+    await producto.save()
+
+    await HistorialInventario.create({
+      productoId,
+      tipo: tipo === 'entrada' ? 'ajuste_entrada' : 'ajuste_salida',
+      cantidad: Number(cantidad),
+      stockAnterior,
+      stockNuevo: producto.stock,
+      usuarioId: usuario?.id || usuario?._id,
+      fecha: new Date(),
+      observaciones: `${tipo.toUpperCase()} - ${causa} - Impacto: S/ ${valorEconomico.toFixed(2)}`
+    })
+
+    return res.json({
+      mensaje: 'Ajuste realizado correctamente',
+      stockAnterior,
+      stockNuevo: producto.stock,
+      valorEconomico
+    })
+
+  } catch (error) {
+    return res.status(500).json({ mensaje: 'Error al realizar ajuste' })
+  }
+}

@@ -16,6 +16,7 @@ import Ventas from '../pages/Ventas'
 import HistorialVentas from '../pages/HistorialVentas'
 import Alertas from '../pages/Alertas'
 import Demandas from '../pages/Demandas'
+import AjusteStock from '../pages/AjusteStock'
 
 
 const token = () => localStorage.getItem('token')
@@ -134,6 +135,11 @@ export default function Router() {
             <NegocioRoute>
               <HistorialVentas />
             </NegocioRoute>
+          } />
+          <Route path="/dashboard/ajustes" element={
+            <DuenoRoute>
+              <AjusteStock />
+            </DuenoRoute>
           } />
           <Route path="/dashboard/*" element={
             <NegocioRoute>
