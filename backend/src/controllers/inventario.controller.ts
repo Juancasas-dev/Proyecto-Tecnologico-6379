@@ -3,6 +3,7 @@ import { Mercaderia } from '../models/mercaderia.model'
 import { Producto } from '../models/producto.model'
 import { HistorialInventario } from '../models/historialInventario.model'
 import { Alerta } from '../models/alerta.model' 
+import { Usuario } from '../models/usuario.model'
 
 export const registrarIngreso = async (req: Request, res: Response) => {
   try {
@@ -256,5 +257,44 @@ export const ajustarInventario = async (req: Request, res: Response) => {
 
   } catch (error) {
     return res.status(500).json({ mensaje: 'Error al realizar ajuste' })
+  }
+}
+
+export const obtenerMovimientosTurno = async (req: Request, res: Response) => {
+  try {
+    const usuario = (req as any).usuario
+    const usuarioData = await Usuario.findById(usuario.id || usuario._id)
+
+    const desde = usuarioData?.ultimoLogout || new Date(0)
+
+    const movimientos = await HistorialInventario.find({
+      fecha: { $gte: desde }
+    })
+    .populate('productoId', 'nombre marca')
+    .populate('usuarioId', 'nombre username')
+    .sort({ fecha: 1 })
+
+    res.json({
+      desde,
+      movimientos
+    })
+  } catch {
+    res.status(500).json({ mensaje: 'Error al obtener movimientos' })
+  }
+}
+
+export const listarHistorialAjustes = async (_req: Request, res: Response) => {
+  try {
+    const historial = await HistorialInventario.find({
+      tipo: { $in: ['ajuste_entrada', 'ajuste_salida', 'ajuste'] }
+    })
+    .populate('productoId', 'nombre marca')
+    .populate('usuarioId', 'nombre username')
+    .sort({ createdAt: -1 })
+    .limit(50)
+
+    res.json(historial)
+  } catch {
+    res.status(500).json({ mensaje: 'Error al listar historial' })
   }
 }

@@ -11,6 +11,20 @@ interface Producto {
   tipoProducto: 'alimento' | 'medicamento' | 'equipamiento'
 }
 
+interface Historial {
+  _id: string
+  tipo: string
+  cantidad: number
+  stockAnterior: number
+  stockNuevo: number
+  fecha: string
+  observaciones?: string
+  productoId?: { nombre: string; marca: string }
+  usuarioId?: { nombre: string; username: string }
+}
+
+
+
 const API = 'http://localhost:3000/api'
 const getToken = () => localStorage.getItem('token')
 
@@ -38,7 +52,7 @@ export default function AjusteStock() {
   const [mensaje, setMensaje] = useState('')
   const [error, setError] = useState('')
   const [mostrarResumen, setMostrarResumen] = useState(false)
-
+  const [historial, setHistorial] = useState<Historial[]>([])
   const headers = { Authorization: `Bearer ${getToken()}` }
 
   const productoSeleccionado = productos.find(p => p._id === productoId)
@@ -52,7 +66,20 @@ export default function AjusteStock() {
       : productoSeleccionado.stock + Number(cantidad || 0)
     : 0
 
-  useEffect(() => { cargarProductos() }, [])
+const cargarHistorial = async () => {
+  try {
+    const { data } = await axios.get(`${API}/inventario/historial-ajustes`, { headers })
+    setHistorial(data)
+  } catch {
+    console.error('Error al cargar historial')
+  }
+}
+
+useEffect(() => { 
+  cargarProductos()
+  cargarHistorial()
+}, [])
+
 
   // resetear causa cuando cambia tipo
   useEffect(() => { setCausa('') }, [tipo])
@@ -373,6 +400,67 @@ export default function AjusteStock() {
           </div>
         </div>
       )}
+      {/* Historial de ajustes */}
+<div className="mt-8">
+  <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
+    Historial de ajustes
+  </h2>
+
+  {historial.length === 0 ? (
+    <div className="bg-card border border-border rounded-lg p-8 text-center">
+      <Icon icon="solar:history-linear" className="text-muted-foreground mx-auto mb-3" height={32} />
+      <p className="text-muted-foreground text-sm">No hay ajustes registrados</p>
+    </div>
+  ) : (
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border">
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">#</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Producto</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Tipo</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Cantidad</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Stock anterior</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Stock nuevo</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Causa</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Usuario</th>
+            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {historial.map((h, index) => (
+            <tr key={h._id} className="border-b border-border last:border-0 hover:bg-muted/30">
+              <td className="py-3 px-4 text-muted-foreground text-xs">{index + 1}</td>
+              <td className="py-3 px-4">
+                <p className="font-medium text-foreground text-sm">{h.productoId?.nombre || '—'}</p>
+                <p className="text-xs text-muted-foreground">{h.productoId?.marca || ''}</p>
+              </td>
+              <td className="py-3 px-4">
+                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                  h.tipo === 'ajuste_entrada' ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                }`}>
+                  {h.tipo === 'ajuste_entrada' ? 'Entrada' : 'Salida'}
+                </span>
+              </td>
+              <td className="py-3 px-4 text-foreground font-medium">{h.cantidad}</td>
+              <td className="py-3 px-4 text-muted-foreground">{h.stockAnterior}</td>
+              <td className="py-3 px-4 text-foreground font-medium">{h.stockNuevo}</td>
+              <td className="py-3 px-4 text-muted-foreground text-xs">
+                {h.observaciones?.split(' - ')[1] || '—'}
+              </td>
+              <td className="py-3 px-4 text-muted-foreground text-xs">
+                {h.usuarioId?.nombre || '—'}
+              </td>
+              <td className="py-3 px-4 text-muted-foreground text-xs">
+                {new Date(h.fecha).toLocaleString('es-PE')}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
     </div>
   )
 }

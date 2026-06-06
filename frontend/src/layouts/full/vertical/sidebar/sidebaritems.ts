@@ -49,6 +49,12 @@ const SidebarContent: MenuItem[] = [
         id: uniqueId(),
         url: '/dashboard/alertas',
       },
+      {
+        name: 'Resumen de turno',
+        icon: 'solar:history-linear',
+        id: uniqueId(),
+        url: '/dashboard/turno',
+      },
     ],
   },
   {
