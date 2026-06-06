@@ -106,3 +106,16 @@ export const cambiarContrasena = async (req: Request, res: Response) => {
 
   res.json({ mensaje: 'Contraseña actualizada correctamente' })
 }
+
+export const logout = async (req: Request, res: Response) => {
+  try {
+    const usuario = (req as any).usuario
+    await Usuario.findByIdAndUpdate(
+      usuario.id || usuario._id,
+      { ultimoLogout: new Date() }
+    )
+    res.json({ mensaje: 'Sesión cerrada correctamente' })
+  } catch {
+    res.status(500).json({ mensaje: 'Error al cerrar sesión' })
+  }
+}

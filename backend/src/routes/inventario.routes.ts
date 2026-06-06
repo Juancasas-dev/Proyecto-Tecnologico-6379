@@ -6,10 +6,13 @@ import {
   actualizarIngreso,
   obtenerIngresoPorId,
   obtenerStock,          
-  ajustarInventario
+  ajustarInventario,
+  obtenerMovimientosTurno,
+  listarHistorialAjustes
 } from '../controllers/inventario.controller'
 import { verificarToken } from '../middlewares/auth.middleware'
-import { verificarRol } from '../middlewares/rol.middleware'  
+import { verificarRol } from '../middlewares/rol.middleware'
+
 
 const router = Router()
 
@@ -20,5 +23,6 @@ router.get('/ingresos/:id',    verificarToken, verificarRol('dueño', 'vendedor'
 router.put('/ingresos/:id',    verificarToken, verificarRol('dueño'), actualizarIngreso)
 router.delete('/ingresos/:id', verificarToken, verificarRol('dueño'), eliminarIngreso)
 router.post('/ajustes',verificarToken,verificarRol('dueño'),ajustarInventario)
-
+router.get('/turno', verificarToken, obtenerMovimientosTurno)
+router.get('/historial-ajustes', verificarToken, verificarRol('dueño'), listarHistorialAjustes)
 export default router
