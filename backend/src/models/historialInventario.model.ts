@@ -2,7 +2,7 @@ import { Schema, model, Document } from 'mongoose'
 
 export interface IHistorial extends Document {
   productoId: Schema.Types.ObjectId
-  tipo: 'ingreso' | 'ajuste' | 'venta'
+  tipo: 'ingreso' | 'ajuste' | 'venta' | 'ajuste_entrada' | 'ajuste_salida'
   cantidad: number
   stockAnterior: number
   stockNuevo: number
@@ -13,7 +13,7 @@ export interface IHistorial extends Document {
 
 const HistorialSchema = new Schema<IHistorial>({
   productoId:    { type: Schema.Types.ObjectId, ref: 'Producto', required: true },
-  tipo:          { type: String, enum: ['ingreso', 'ajuste', 'venta'], required: true },
+  tipo: { type: String, enum: ['ingreso', 'ajuste', 'venta', 'ajuste_entrada', 'ajuste_salida'], required: true },
   cantidad:      { type: Number, required: true },
   stockAnterior: { type: Number, required: true },
   stockNuevo:    { type: Number, required: true },
