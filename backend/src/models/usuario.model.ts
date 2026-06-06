@@ -14,7 +14,8 @@ export interface IUsuario extends Document {
   tokenInvalidadoEn: Date | null
   debeCambiarContrasena: boolean
   resetToken: string | null        
-  resetTokenExpira: Date | null    
+  resetTokenExpira: Date | null
+  ultimoLogout?: Date    
 }
 
 const UsuarioSchema = new Schema<IUsuario>({
@@ -34,8 +35,9 @@ const UsuarioSchema = new Schema<IUsuario>({
   creadoPor:             { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
   tokenInvalidadoEn:     { type: Date,    default: null },
   debeCambiarContrasena: { type: Boolean, default: true },
-   resetToken:            { type: String,  default: null },  
-  resetTokenExpira:      { type: Date,    default: null }   
+  resetToken:            { type: String,  default: null },  
+  resetTokenExpira:      { type: Date,    default: null },
+  ultimoLogout:          { type: Date,    default: null }   
 }, { timestamps: true })
 
 export const Usuario = model<IUsuario>('Usuario', UsuarioSchema)

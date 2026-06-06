@@ -1,5 +1,4 @@
 import { Icon } from '@iconify/react'
-
 import { Link, useNavigate } from 'react-router-dom'
 import {
   DropdownMenu,
@@ -9,31 +8,41 @@ import {
   DropdownMenuTrigger,
 } from '../../../../components/ui/dropdown-menu'
 import { Button } from '../../../../components/ui/button'
+import axios from 'axios'
 
 const Profile = () => {
   const navigate = useNavigate()
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}')
 
-  const cerrarSesion = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('usuario')
-    navigate('/login')
+  const cerrarSesion = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post('http://localhost:3000/api/auth/logout', {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    } catch {
+      console.error('Error al registrar logout')
+    } finally {
+      localStorage.removeItem('token')
+      localStorage.removeItem('usuario')
+      navigate('/login')
+    }
   }
 
-  // menú según rol
+
   const menuItems = [
     {
       title: 'Mi Perfil',
       icon: 'tabler:user',
       url: '/dashboard/perfil'
     },
-    // solo el dueño ve gestión de usuarios
+
     ...(usuario.rol === 'dueño' ? [{
       title: 'Gestión de Usuarios',
       icon: 'tabler:users',
       url: '/dashboard/usuarios'
     }] : []),
-    // solo el dueño ve reportes
+
     ...(usuario.rol === 'dueño' ? [{
       title: 'Reportes',
       icon: 'tabler:chart-bar',
