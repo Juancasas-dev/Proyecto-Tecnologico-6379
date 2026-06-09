@@ -8,6 +8,7 @@ interface Producto {
     marca: string
     precio: number
     stock: number
+    nivelMinimo: number
     tipoProducto: 'alimento' | 'medicamento' | 'equipamiento'
 }
 
@@ -44,7 +45,11 @@ export default function Ventas() {
     const [ventaExitosa, setVentaExitosa] = useState<any>(null)
     const [contador, setContador] = useState(3)
     const [error, setError] = useState('')
-
+    const [alertasStock, setAlertasStock] = useState<Array<{
+        nombre: string
+        stockActual: number
+        nivelMinimo: number
+    }>>([])
     const headers = { Authorization: `Bearer ${getToken()}` }
 
     const regexBoleta = /^[BF]\d{3}-\d{8}$/
@@ -111,13 +116,20 @@ export default function Ventas() {
         setLotesPorProducto(info)
     }
     const productosFiltrados = useMemo(() => {
-        return productos.filter(p => {
+        const filtrados = productos.filter(p => {
             const coincideTipo = filtroTipo === 'todos' || p.tipoProducto === filtroTipo
             const coincideBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
                 p.marca.toLowerCase().includes(busqueda.toLowerCase())
             return coincideTipo && coincideBusqueda
         })
-    }, [productos, filtroTipo, busqueda])
+
+        return filtrados.sort((a, b) => {
+            const orden: Record<string, number> = { vencido: 0, proximo: 1, normal: 2 }
+            const estadoA = lotesPorProducto[a._id]?.estadoCaducidad || 'normal'
+            const estadoB = lotesPorProducto[b._id]?.estadoCaducidad || 'normal'
+            return orden[estadoA] - orden[estadoB]
+        })
+    }, [productos, filtroTipo, busqueda, lotesPorProducto])
 
     const agregarAlCarrito = (producto: Producto) => {
         setCarrito(prev => {
@@ -199,6 +211,35 @@ export default function Ventas() {
             }, { headers })
 
             setVentaExitosa(data.venta)
+
+            const alertas: Array<{ nombre: string; stockActual: number; nivelMinimo: number }> = []
+            for (const item of carrito) {
+                const prod = productos.find(p => p._id === item.productoId)
+                if (prod) {
+                    const nuevoStock = prod.stock - item.cantidad
+                    if (nuevoStock <= prod.nivelMinimo) {  // necesitas nivelMinimo en la interfaz
+                        alertas.push({
+                            nombre: item.nombre,
+                            stockActual: nuevoStock,
+                            nivelMinimo: prod.nivelMinimo || 0
+                        })
+                    }
+                }
+            }
+            if (alertas.length > 0) {
+  setAlertasStock(prev => {
+    const nuevas = [...prev]
+    for (const alerta of alertas) {
+      const existe = nuevas.findIndex(a => a.nombre === alerta.nombre)
+      if (existe >= 0) {
+        nuevas[existe].stockActual = alerta.stockActual  // actualiza
+      } else {
+        nuevas.push(alerta)  // agrega nueva
+      }
+    }
+    return nuevas.sort((a, b) => a.stockActual - b.stockActual)
+  })
+}
             setCarrito([])
             setNumeroBoleta('')
             setTipoPago('efectivo')
@@ -421,7 +462,37 @@ export default function Ventas() {
                     )}
                 </div>
             </div>
+            {/* Banner alertas stock crítico */}
+            {alertasStock.length > 0 && (
+                <div className="fixed top-5 right-5 z-50 max-w-sm w-full">
+                    <div className="bg-card border-2 border-warning rounded-xl shadow-lg p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+                                <Icon icon="solar:danger-triangle-linear" className="text-warning" height={20} />
+                            </div>
+                            <p className="font-semibold text-foreground text-sm">⚠️ Alerta de Stock Crítico</p>
+                        </div>
 
+                        <div className="space-y-2 mb-4">
+                            {alertasStock.map((alerta, i) => (
+                                <div key={i} className="bg-warning/10 rounded-lg px-3 py-2">
+                                    <p className="text-sm font-medium text-foreground">{alerta.nombre}</p>
+                                    <p className="text-xs text-warning">
+                                        {alerta.stockActual} unidades restantes — Mínimo: {alerta.nivelMinimo}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            onClick={() => setAlertasStock([])}
+                            className="w-full py-2 rounded-lg bg-warning text-white text-sm font-medium hover:opacity-90 transition"
+                        >
+                            Entendido
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Modal venta exitosa */}
             {ventaExitosa && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">

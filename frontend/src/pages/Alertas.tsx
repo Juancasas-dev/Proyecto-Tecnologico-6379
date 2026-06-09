@@ -26,20 +26,32 @@ export default function Alertas() {
 
     const headers = { Authorization: `Bearer ${getToken()}` }
 
-    const cargarAlertas = async () => {
-        try {
-            setLoading(true)
-            const params: any = {}
-            if (filtro !== 'todos') params.tipo = filtro
+   const cargarAlertas = async () => {
+  try {
+    setLoading(true)
+    const params: any = {}
+    if (filtro !== 'todos') params.tipo = filtro
 
-            const { data } = await axios.get(`${API}/alertas`, { headers, params })
-            setAlertas(data)
-        } catch {
-            console.error('Error al cargar alertas')
-        } finally {
-            setLoading(false)
-        }
+    const { data } = await axios.get(`${API}/alertas`, { headers, params })
+    
+    
+    const ordenUrgencia: Record<string, number> = {
+      vencido: 0,
+      stock_bajo: 1,
+      proximo_vencer: 2
     }
+    
+    const ordenadas = data.sort((a: any, b: any) => 
+      (ordenUrgencia[a.tipo] ?? 3) - (ordenUrgencia[b.tipo] ?? 3)
+    )
+    
+    setAlertas(ordenadas)
+  } catch {
+    console.error('Error al cargar alertas')
+  } finally {
+    setLoading(false)
+  }
+}
 
     useEffect(() => { cargarAlertas() }, [filtro])
 
