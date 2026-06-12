@@ -132,6 +132,14 @@ export default function Ventas() {
     }, [productos, filtroTipo, busqueda, lotesPorProducto])
 
     const agregarAlCarrito = (producto: Producto) => {
+        const infoLote = lotesPorProducto[producto._id]
+        if (infoLote?.estadoCaducidad === 'vencido' &&
+            infoLote?.fechaVencimientoProxima &&
+            new Date(infoLote.fechaVencimientoProxima) < new Date()) {
+            setError('No se puede vender un producto vencido')
+            setTimeout(() => setError(''), 3000)
+            return
+        }
         setCarrito(prev => {
             const existe = prev.find(i => i.productoId === producto._id)
             if (existe) {
@@ -227,19 +235,19 @@ export default function Ventas() {
                 }
             }
             if (alertas.length > 0) {
-  setAlertasStock(prev => {
-    const nuevas = [...prev]
-    for (const alerta of alertas) {
-      const existe = nuevas.findIndex(a => a.nombre === alerta.nombre)
-      if (existe >= 0) {
-        nuevas[existe].stockActual = alerta.stockActual  // actualiza
-      } else {
-        nuevas.push(alerta)  // agrega nueva
-      }
-    }
-    return nuevas.sort((a, b) => a.stockActual - b.stockActual)
-  })
-}
+                setAlertasStock(prev => {
+                    const nuevas = [...prev]
+                    for (const alerta of alertas) {
+                        const existe = nuevas.findIndex(a => a.nombre === alerta.nombre)
+                        if (existe >= 0) {
+                            nuevas[existe].stockActual = alerta.stockActual
+                        } else {
+                            nuevas.push(alerta)
+                        }
+                    }
+                    return nuevas.sort((a, b) => a.stockActual - b.stockActual)
+                })
+            }
             setCarrito([])
             setNumeroBoleta('')
             setTipoPago('efectivo')
@@ -303,11 +311,15 @@ export default function Ventas() {
                         {productosFiltrados.map(producto => (
                             <div
                                 key={producto._id}
-                                className={`bg-card border rounded-lg p-4 cursor-pointer transition ${lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido'
-                                    ? 'border-error hover:border-error/80'
-                                    : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
-                                        ? 'border-warning hover:border-warning/80'
-                                        : 'border-border hover:border-primary'
+                                className={`bg-card border rounded-lg p-4 transition ${lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' &&
+                                        lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
+                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                                        ? 'border-error opacity-50 cursor-not-allowed'
+                                        : lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido'
+                                            ? 'border-error cursor-pointer hover:border-error/80'
+                                            : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
+                                                ? 'border-warning cursor-pointer hover:border-warning/80'
+                                                : 'border-border cursor-pointer hover:border-primary'
                                     }`}
                                 onClick={() => agregarAlCarrito(producto)}
                             >
@@ -331,7 +343,10 @@ export default function Ventas() {
 
 
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' && (
-                                    <span className="text-xs text-error font-medium">Vence en menos de 2 semanas</span>
+                                    lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
+                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                                        ? <span className="text-xs text-error font-medium">Producto vencido</span>
+                                        : <span className="text-xs text-error font-medium">Vence en menos de 2 semanas</span>
                                 )}
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo' && (
                                     <span className="text-xs text-warning font-medium">Vence en menos de 1 mes</span>
@@ -470,7 +485,7 @@ export default function Ventas() {
                             <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
                                 <Icon icon="solar:danger-triangle-linear" className="text-warning" height={20} />
                             </div>
-                            <p className="font-semibold text-foreground text-sm">⚠️ Alerta de Stock Crítico</p>
+                            <p className="font-semibold text-foreground text-sm">Alerta de Stock Crítico</p>
                         </div>
 
                         <div className="space-y-2 mb-4">

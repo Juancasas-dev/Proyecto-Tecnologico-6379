@@ -219,23 +219,29 @@ export const ajustarInventario = async (req: Request, res: Response) => {
       }
       producto.stock -= Number(cantidad)
 
-    } else if (tipo === 'entrada') {
-      producto.stock += Number(cantidad)
+   } else if (tipo === 'entrada') {
+  producto.stock += Number(cantidad)
 
-      await Mercaderia.create({
-        producto: productoId,
-        cantidad: Number(cantidad),
-        cantidadRestante: Number(cantidad),
-        fechaIngreso: new Date(),
-        fechaVencimiento: null as any, 
-        creadoPor: usuario?.id || null
-      })
+  await Mercaderia.create({
+    producto: productoId,
+    cantidad: Number(cantidad),
+    cantidadRestante: Number(cantidad),
+    fechaIngreso: new Date(),        // 👈 cambia esto
+    fechaVencimiento: null as any, 
+    creadoPor: usuario?.id || null
+  })
 
     } else {
       return res.status(400).json({ mensaje: 'Tipo de ajuste inválido' })
     }
 
     await producto.save()
+    if (tipo === 'entrada' && producto.stock > producto.nivelMinimo) {
+  await Alerta.updateOne(
+    { producto: producto._id, tipo: 'stock_bajo', activa: true },
+    { activa: false }
+  )
+}
 
     await HistorialInventario.create({
       productoId,

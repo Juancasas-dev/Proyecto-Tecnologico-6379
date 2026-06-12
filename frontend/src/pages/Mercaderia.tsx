@@ -204,13 +204,17 @@ export default function Mercaderia() {
                     {formatearFecha(ingreso.fechaIngreso)}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${new Date(ingreso.fechaVencimiento) < new Date()
-                      ? 'bg-error/10 text-error'
-                      : new Date(ingreso.fechaVencimiento) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-success/10 text-success'
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${!ingreso.fechaVencimiento
+                        ? 'bg-muted/10 text-muted-foreground'
+                        : new Date(ingreso.fechaVencimiento) < new Date()
+                          ? 'bg-error/10 text-error'
+                          : new Date(ingreso.fechaVencimiento) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-success/10 text-success'
                       }`}>
-                      {formatearFecha(ingreso.fechaVencimiento)}
+                      {ingreso.fechaVencimiento
+                        ? formatearFecha(ingreso.fechaVencimiento)
+                        : 'Sin fecha'}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -315,17 +319,17 @@ export default function Mercaderia() {
 
               {!editando && (
                 <div>
-  <label className="text-sm text-foreground mb-1 block">Fecha de ingreso</label>
-  <input
-    type="date"
-    value={form.fechaIngreso ? form.fechaIngreso.split('T')[0] : ''}
-    onChange={e => {
-      const fecha = e.target.value
-      setForm({ ...form, fechaIngreso: fecha ? `${fecha}T05:00:00.000Z` : '' })
-    }}
-    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
-  />
-</div>
+                  <label className="text-sm text-foreground mb-1 block">Fecha de ingreso</label>
+                  <input
+                    type="date"
+                    value={form.fechaIngreso ? form.fechaIngreso.split('T')[0] : ''}
+                    onChange={e => {
+                      const fecha = e.target.value
+                      setForm({ ...form, fechaIngreso: fecha ? `${fecha}T05:00:00.000Z` : '' })
+                    }}
+                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
+                  />
+                </div>
               )}
 
               <div>
