@@ -13,6 +13,7 @@ import ventaRoutes from './routes/venta.routes'
 import { Venta } from './models/venta.model' 
 import alertaRoutes from './routes/alerta.routes'
 import { iniciarAlertasCron } from './services/alerta-cron.service'
+import reporteRoutes from './routes/reporte.routes'
 
 dotenv.config()
 connectDB().then(() => {
@@ -33,4 +34,5 @@ app.use('/api/backup', backupRoutes)
 app.use('/api/demandas', demandaRoutes)
 app.use('/api/ventas', ventaRoutes)
 app.use('/api/alertas', alertaRoutes)
+app.use('/api/reportes', reporteRoutes)
 app.listen(3000, () => console.log('Servidor en puerto 3000'))
