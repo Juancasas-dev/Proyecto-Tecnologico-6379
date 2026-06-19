@@ -17,6 +17,23 @@ interface LoteInfo {
     fechaVencimientoProxima: Date | null
 }
 
+
+interface LoteDesglose {
+    loteId: string
+    fechaVencimiento: string | null
+    cantidadDisponible: number
+    cantidadDespachada: number
+    diasRestantes: number | null
+    proximoAVencer: boolean
+}
+
+interface PreviewLotes {
+    stockDisponible: number
+    alcanza: boolean
+    desglose: LoteDesglose[]
+}
+
+
 interface ItemVenta {
     productoId: string
     nombre: string
@@ -50,14 +67,17 @@ export default function Ventas() {
         stockActual: number
         nivelMinimo: number
     }>>([])
-    const headers = { Authorization: `Bearer ${getToken()}` }
 
+
+    const [previewsPorProducto, setPreviewsPorProducto] = useState<Record<string, PreviewLotes>>({})
+  
+
+    const headers = { Authorization: `Bearer ${getToken()}` }
     const regexBoleta = /^[BF]\d{3}-\d{8}$/
 
     useEffect(() => {
         cargarProductos()
     }, [])
-
 
     useEffect(() => {
         if (!ventaExitosa) return
@@ -71,13 +91,14 @@ export default function Ventas() {
     }, [ventaExitosa, contador])
 
     const [lotesPorProducto, setLotesPorProducto] = useState<Record<string, LoteInfo>>({})
+
     const cargarProductos = async () => {
         try {
             setLoading(true)
             const { data } = await axios.get(`${API}/productos`, { headers })
             const prods = data.filter((p: Producto) => p.stock > 0)
             setProductos(prods)
-            await cargarCaducidad(prods)  // 👈 agrega
+            await cargarCaducidad(prods)
         } catch {
             console.error('Error al cargar productos')
         } finally {
@@ -107,7 +128,10 @@ export default function Ventas() {
                         else if (fechas[0] < unMes) estado = 'proximo'
                     }
 
-                    info[p._id] = { estadoCaducidad: estado, fechaVencimientoProxima: data.lotes?.[0]?.fechaVencimiento || null }
+                    info[p._id] = {
+                        estadoCaducidad: estado,
+                        fechaVencimientoProxima: data.lotes?.[0]?.fechaVencimiento || null
+                    }
                 } catch {
                     info[p._id] = { estadoCaducidad: 'normal', fechaVencimientoProxima: null }
                 }
@@ -115,10 +139,26 @@ export default function Ventas() {
         )
         setLotesPorProducto(info)
     }
+
+    // ─── NUEVO: llama al endpoint preview y guarda el desglose ────────────
+    const cargarPreviewLotes = async (productoId: string, cantidad: number) => {
+        try {
+            const { data } = await axios.get(`${API}/ventas/preview-lotes`, {
+                params: { productoId, cantidad },
+                headers
+            })
+            setPreviewsPorProducto(prev => ({ ...prev, [productoId]: data }))
+        } catch {
+            console.error('Error al cargar preview de lotes')
+        }
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     const productosFiltrados = useMemo(() => {
         const filtrados = productos.filter(p => {
             const coincideTipo = filtroTipo === 'todos' || p.tipoProducto === filtroTipo
-            const coincideBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+            const coincideBusqueda =
+                p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
                 p.marca.toLowerCase().includes(busqueda.toLowerCase())
             return coincideTipo && coincideBusqueda
         })
@@ -133,22 +173,31 @@ export default function Ventas() {
 
     const agregarAlCarrito = (producto: Producto) => {
         const infoLote = lotesPorProducto[producto._id]
-        if (infoLote?.estadoCaducidad === 'vencido' &&
+        if (
+            infoLote?.estadoCaducidad === 'vencido' &&
             infoLote?.fechaVencimientoProxima &&
-            new Date(infoLote.fechaVencimientoProxima) < new Date()) {
+            new Date(infoLote.fechaVencimientoProxima) < new Date()
+        ) {
             setError('No se puede vender un producto vencido')
             setTimeout(() => setError(''), 3000)
             return
         }
+
         setCarrito(prev => {
             const existe = prev.find(i => i.productoId === producto._id)
+            const nuevaCantidad = existe ? existe.cantidad + 1 : 1
+
+            // ─── NUEVO: cargar preview con la cantidad actualizada ─────────
+            cargarPreviewLotes(producto._id, nuevaCantidad)
+            // ────────────────────────────────────────────────────────────────
+
             if (existe) {
                 return prev.map(i => i.productoId === producto._id
                     ? {
                         ...i,
-                        cantidad: i.cantidad + 1,
-                        subtotal: (i.cantidad + 1) * i.precio,
-                        stockInsuficiente: (i.cantidad + 1) > i.stockDisponible
+                        cantidad: nuevaCantidad,
+                        subtotal: nuevaCantidad * i.precio,
+                        stockInsuficiente: nuevaCantidad > i.stockDisponible
                     }
                     : i
                 )
@@ -171,6 +220,9 @@ export default function Ventas() {
             eliminarDelCarrito(productoId)
             return
         }
+        // ─── NUEVO: actualizar preview al cambiar cantidad ─────────────────
+        cargarPreviewLotes(productoId, cantidad)
+        // ──────────────────────────────────────────────────────────────────
         setCarrito(prev => prev.map(i => i.productoId === productoId
             ? {
                 ...i,
@@ -184,6 +236,13 @@ export default function Ventas() {
 
     const eliminarDelCarrito = (productoId: string) => {
         setCarrito(prev => prev.filter(i => i.productoId !== productoId))
+        // ─── NUEVO: limpiar preview al eliminar ────────────────────────────
+        setPreviewsPorProducto(prev => {
+            const nuevo = { ...prev }
+            delete nuevo[productoId]
+            return nuevo
+        })
+        // ──────────────────────────────────────────────────────────────────
     }
 
     const total = carrito.reduce((sum, i) => sum + i.subtotal, 0)
@@ -199,7 +258,6 @@ export default function Ventas() {
             setError('El número de boleta es obligatorio')
             return
         }
-
         if (!regexBoleta.test(numeroBoleta)) {
             setError('Formato inválido. Usa el formato B001-00001234 o F001-00001234')
             return
@@ -225,7 +283,7 @@ export default function Ventas() {
                 const prod = productos.find(p => p._id === item.productoId)
                 if (prod) {
                     const nuevoStock = prod.stock - item.cantidad
-                    if (nuevoStock <= prod.nivelMinimo) {  // necesitas nivelMinimo en la interfaz
+                    if (nuevoStock <= prod.nivelMinimo) {
                         alertas.push({
                             nombre: item.nombre,
                             stockActual: nuevoStock,
@@ -248,7 +306,9 @@ export default function Ventas() {
                     return nuevas.sort((a, b) => a.stockActual - b.stockActual)
                 })
             }
+
             setCarrito([])
+            setPreviewsPorProducto({})   // ← limpiar previews al confirmar
             setNumeroBoleta('')
             setTipoPago('efectivo')
             cargarProductos()
@@ -259,6 +319,15 @@ export default function Ventas() {
         }
     }
 
+    // ─── NUEVO: helper para formatear fecha de lote ────────────────────────
+    const formatearFecha = (fecha: string | null) => {
+        if (!fecha) return 'Sin fecha'
+        return new Date(fecha).toLocaleDateString('es-PE', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
+        })
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -267,7 +336,6 @@ export default function Ventas() {
                 <div className="mb-4">
                     <h1 className="text-xl font-semibold text-foreground mb-4">Registrar Venta</h1>
 
-                    {/* Filtros */}
                     <div className="flex gap-2 mb-3 flex-wrap">
                         {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
                             <button
@@ -285,7 +353,6 @@ export default function Ventas() {
                         ))}
                     </div>
 
-                    {/* Buscador */}
                     <input
                         type="text"
                         placeholder="Buscar por nombre o marca..."
@@ -295,7 +362,6 @@ export default function Ventas() {
                     />
                 </div>
 
-                {/* Lista de productos */}
                 {loading ? (
                     <div className="flex justify-center py-12">
                         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -341,7 +407,6 @@ export default function Ventas() {
                                     </span>
                                 </div>
 
-
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' && (
                                     lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
                                         new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
@@ -371,52 +436,84 @@ export default function Ventas() {
                         </div>
                     ) : (
                         <>
-                            {/* Items del carrito */}
-                            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto">
-                                {carrito.map(item => (
-                                    <div key={item.productoId} className={`p-3 rounded-lg border ${item.stockInsuficiente ? 'border-error bg-error/5' : 'border-border'
-                                        }`}>
-                                        <div className="flex justify-between items-start mb-1">
-                                            <p className="text-sm font-medium text-foreground">{item.nombre}</p>
-                                            <button
-                                                onClick={() => eliminarDelCarrito(item.productoId)}
-                                                className="text-muted-foreground hover:text-error transition"
-                                            >
-                                                <Icon icon="solar:close-circle-linear" height={16} />
-                                            </button>
-                                        </div>
-                                        {item.stockInsuficiente && (
-                                            <p className="text-xs text-error mb-1">
-                                                Stock insuficiente. Disponibles: {item.stockDisponible}
-                                            </p>
-                                        )}
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
+                            <div className="space-y-3 mb-4 max-h-[28rem] overflow-y-auto">
+                                {carrito.map(item => {
+                                    const preview = previewsPorProducto[item.productoId]
+                                    return (
+                                        <div key={item.productoId} className={`p-3 rounded-lg border ${item.stockInsuficiente ? 'border-error bg-error/5' : 'border-border'}`}>
+                                            <div className="flex justify-between items-start mb-1">
+                                                <p className="text-sm font-medium text-foreground">{item.nombre}</p>
                                                 <button
-                                                    onClick={() => cambiarCantidad(item.productoId, item.cantidad - 1)}
-                                                    className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
+                                                    onClick={() => eliminarDelCarrito(item.productoId)}
+                                                    className="text-muted-foreground hover:text-error transition"
                                                 >
-                                                    -
-                                                </button>
-                                                <span className="text-sm font-medium text-foreground w-6 text-center">
-                                                    {item.cantidad}
-                                                </span>
-                                                <button
-                                                    onClick={() => cambiarCantidad(item.productoId, item.cantidad + 1)}
-                                                    className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
-                                                >
-                                                    +
+                                                    <Icon icon="solar:close-circle-linear" height={16} />
                                                 </button>
                                             </div>
-                                            <span className="text-sm font-semibold text-foreground">
-                                                S/ {item.subtotal.toFixed(2)}
-                                            </span>
+
+                                            {item.stockInsuficiente && (
+                                                <p className="text-xs text-error mb-1">
+                                                    Stock insuficiente. Disponibles: {item.stockDisponible}
+                                                </p>
+                                            )}
+
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => cambiarCantidad(item.productoId, item.cantidad - 1)}
+                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <span className="text-sm font-medium text-foreground w-6 text-center">
+                                                        {item.cantidad}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => cambiarCantidad(item.productoId, item.cantidad + 1)}
+                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                                <span className="text-sm font-semibold text-foreground">
+                                                    S/ {item.subtotal.toFixed(2)}
+                                                </span>
+                                            </div>
+
+                                            {/* ── NUEVO: desglose de lotes FEFO ─────────────────────── */}
+                                            {preview && preview.desglose.length > 0 && (
+                                                <div className="mt-2 pt-2 border-t border-border/50">
+                                                    <p className="text-xs text-muted-foreground mb-1 font-medium">
+                                                        Despacho:
+                                                    </p>
+                                                    <div className="space-y-1">
+                                                        {preview.desglose.map(lote => (
+                                                            <div key={lote.loteId} className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="text-xs text-foreground">
+                                                                    • {lote.cantidadDespachada} ud. — vence {formatearFecha(lote.fechaVencimiento)}
+                                                                </span>
+                                                                {lote.proximoAVencer && (
+                                                                    <span className="inline-flex items-center gap-1 text-xs text-warning font-medium">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block" />
+                                                                        Prox. vencer
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    {!preview.alcanza && (
+                                                        <p className="text-xs text-error mt-1">
+                                                            Stock insuficiente en lotes vigentes
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {/* ───────────────────────────────────────────────────────── */}
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
 
-                            {/* Total */}
                             <div className="border-t border-border pt-3 mb-4">
                                 <div className="flex justify-between items-center">
                                     <span className="font-semibold text-foreground">Total</span>
@@ -424,7 +521,6 @@ export default function Ventas() {
                                 </div>
                             </div>
 
-                            {/* Tipo de pago */}
                             <div className="mb-4">
                                 <label className="text-sm text-foreground mb-2 block">Tipo de pago</label>
                                 <div className="flex gap-2">
@@ -443,7 +539,6 @@ export default function Ventas() {
                                 </div>
                             </div>
 
-                            {/* Número de boleta */}
                             <div className="mb-4">
                                 <label className="text-sm text-foreground mb-1 block">
                                     N° Boleta / Factura
@@ -465,7 +560,6 @@ export default function Ventas() {
                                 <p className="text-error text-sm text-center mb-3">{error}</p>
                             )}
 
-                            {/* Botón confirmar */}
                             <button
                                 onClick={handleConfirmar}
                                 disabled={procesando || hayStockInsuficiente || carrito.length === 0}
@@ -477,6 +571,7 @@ export default function Ventas() {
                     )}
                 </div>
             </div>
+
             {/* Banner alertas stock crítico */}
             {alertasStock.length > 0 && (
                 <div className="fixed top-5 right-5 z-50 max-w-sm w-full">
@@ -487,7 +582,6 @@ export default function Ventas() {
                             </div>
                             <p className="font-semibold text-foreground text-sm">Alerta de Stock Crítico</p>
                         </div>
-
                         <div className="space-y-2 mb-4">
                             {alertasStock.map((alerta, i) => (
                                 <div key={i} className="bg-warning/10 rounded-lg px-3 py-2">
@@ -498,7 +592,6 @@ export default function Ventas() {
                                 </div>
                             ))}
                         </div>
-
                         <button
                             onClick={() => setAlertasStock([])}
                             className="w-full py-2 rounded-lg bg-warning text-white text-sm font-medium hover:opacity-90 transition"
@@ -508,6 +601,7 @@ export default function Ventas() {
                     </div>
                 </div>
             )}
+
             {/* Modal venta exitosa */}
             {ventaExitosa && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
