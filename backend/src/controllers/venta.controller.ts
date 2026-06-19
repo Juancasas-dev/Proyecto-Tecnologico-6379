@@ -72,7 +72,9 @@ export const registrarVenta = async (req: Request, res: Response) => {
 
             const lotes = await Mercaderia.find({
                 producto: item.producto as any,
-                cantidadRestante: { $gt: 0 }
+                cantidadRestante: { $gt: 0 },
+                bloqueado: { $ne: true } 
+
             })
                 .sort({ fechaVencimiento: 1 })
                 .session(session)
@@ -210,5 +212,66 @@ export const obtenerVenta = async (req: Request, res: Response) => {
         res.json(venta)
     } catch {
         res.status(500).json({ mensaje: 'Error al obtener venta' })
+    }
+}
+
+export const previewLotes = async (req: Request, res: Response) => {
+    try {
+        const { productoId, cantidad } = req.query
+
+        if (!productoId || !cantidad) {
+            return res.status(400).json({ mensaje: 'productoId y cantidad son requeridos' })
+        }
+
+        const cantidadSolicitada = Number(cantidad)
+        const hoy = new Date()
+
+        const lotes = await Mercaderia.find({
+            producto: productoId as any,
+            cantidadRestante: { $gt: 0 },
+            bloqueado: { $ne: true }
+        }).sort({ fechaVencimiento: 1 })
+
+        const desglose: {
+            loteId: string
+            fechaVencimiento: Date | null
+            cantidadDisponible: number
+            cantidadDespachada: number
+            diasRestantes: number | null
+            proximoAVencer: boolean
+        }[] = []
+
+        let restante = cantidadSolicitada
+
+        for (const lote of lotes) {
+            if (restante <= 0) break
+
+            const despachado = Math.min(lote.cantidadRestante, restante)
+            restante -= despachado
+
+            const diasRestantes = lote.fechaVencimiento
+                ? Math.ceil((lote.fechaVencimiento.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+                : null
+
+            desglose.push({
+                loteId: String(lote._id),
+                fechaVencimiento: lote.fechaVencimiento ?? null,
+                cantidadDisponible: lote.cantidadRestante,
+                cantidadDespachada: despachado,
+                diasRestantes,
+                proximoAVencer: diasRestantes !== null && diasRestantes <= 30
+            })
+        }
+
+        res.json({
+            productoId,
+            cantidadSolicitada,
+            stockDisponible: lotes.reduce((sum, l) => sum + l.cantidadRestante, 0),
+            alcanza: restante === 0,
+            desglose
+        })
+
+    } catch {
+        res.status(500).json({ mensaje: 'Error al calcular preview de lotes' })
     }
 }
