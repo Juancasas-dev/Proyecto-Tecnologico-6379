@@ -17,8 +17,8 @@ import HistorialVentas from '../pages/HistorialVentas'
 import Alertas from '../pages/Alertas'
 import Demandas from '../pages/Demandas'
 import AjusteStock from '../pages/AjusteStock'
-import ResumenTurno from '../pages/ResumenTurnos'
 import ResumenTurnos from '../pages/ResumenTurnos'
+import Reportes from '../pages/Reportes'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -118,13 +118,18 @@ export default function Router() {
             </NegocioRoute>
           } />
           <Route path="/dashboard/turno" element={
-  <NegocioRoute>
-    <ResumenTurnos />
-  </NegocioRoute>
-} />
+            <NegocioRoute>
+              <ResumenTurnos />
+            </NegocioRoute>
+          } />
           <Route path="/dashboard/demandas" element={
             <DuenoRoute>
               <Demandas />
+            </DuenoRoute>
+          } />
+          <Route path="/dashboard/reportes" element={
+            <DuenoRoute>
+              <Reportes />
             </DuenoRoute>
           } />
           <Route path="/dashboard/alertas" element={
