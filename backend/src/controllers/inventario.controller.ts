@@ -226,7 +226,7 @@ export const ajustarInventario = async (req: Request, res: Response) => {
     producto: productoId,
     cantidad: Number(cantidad),
     cantidadRestante: Number(cantidad),
-    fechaIngreso: new Date(),        // 👈 cambia esto
+    fechaIngreso: new Date(),       
     fechaVencimiento: null as any, 
     creadoPor: usuario?.id || null
   })
@@ -251,6 +251,8 @@ export const ajustarInventario = async (req: Request, res: Response) => {
       stockNuevo: producto.stock,
       usuarioId: usuario?.id || usuario?._id,
       fecha: new Date(),
+      causa,                                                     
+      valorEconomico: tipo === 'salida' ? valorEconomico : 0,
       observaciones: `${tipo.toUpperCase()} - ${causa} - Impacto: S/ ${valorEconomico.toFixed(2)}`
     })
 

@@ -9,6 +9,8 @@ export interface IHistorial extends Document {
   usuarioId: Schema.Types.ObjectId
   fecha: Date
   observaciones?: string
+  causa?: string              
+  valorEconomico?: number     
 }
 
 const HistorialSchema = new Schema<IHistorial>({
@@ -19,7 +21,17 @@ const HistorialSchema = new Schema<IHistorial>({
   stockNuevo:    { type: Number, required: true },
   usuarioId:     { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
   fecha:         { type: Date, default: Date.now },
-  observaciones: { type: String }
+  observaciones: { type: String },
+  causa: {
+    type: String,
+    enum: ['Merma', 'Robo o hurto', 'Producto vencido', 'Error de conteo',
+           'Otra', 'Stock encontrado no registrado', 'Devolución de cliente'],
+    default: null
+  },
+  valorEconomico: {
+    type: Number,
+    default: 0
+  }
 }, { timestamps: true })
 
 export const HistorialInventario = model<IHistorial>('HistorialInventario', HistorialSchema)
