@@ -7,6 +7,7 @@ export interface IMercaderia extends Document {
   fechaIngreso: Date
   fechaVencimiento: Date
   creadoPor: Schema.Types.ObjectId | null
+  bloqueado: boolean                        
 }
 
 const MercaderiaSchema = new Schema<IMercaderia>({
@@ -15,31 +16,29 @@ const MercaderiaSchema = new Schema<IMercaderia>({
     ref: 'Producto',
     required: true
   },
-
   cantidad: {
     type: Number,
     required: true,
     min: 1
   },
-
- 
   cantidadRestante: {
     type: Number,
     required: true
   },
-
   fechaIngreso: {
     type: Date,
     required: true,
     default: Date.now
   },
-
   fechaVencimiento: {
-  type: Date,
-  required: false,
-  default: null
-},
-
+    type: Date,
+    required: false,
+    default: null
+  },
+  bloqueado: {
+    type: Boolean,
+    default: false                          
+  },
   creadoPor: {
     type: Schema.Types.ObjectId,
     ref: 'Usuario',
