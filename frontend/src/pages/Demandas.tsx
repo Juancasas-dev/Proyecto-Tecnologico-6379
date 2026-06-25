@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from '@iconify/react'
 import axios from 'axios'
 
+
 interface Demanda {
   _id: string
   producto: string
@@ -21,10 +22,12 @@ export default function Demandas() {
   const [demandas, setDemandas] = useState<Demanda[]>([])
   const [loading, setLoading] = useState(true)
   const [verAtendidas, setVerAtendidas] = useState(false)
+
+
   const headers = { Authorization: `Bearer ${getToken()}` }
   const demandasMostradas = verAtendidas
-  ? demandas
-  : demandas.filter(d => !d.atendido)
+    ? demandas
+    : demandas.filter(d => !d.atendido)
 
   const cargarDemandas = async () => {
     try {
@@ -52,19 +55,19 @@ export default function Demandas() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-  <div>
-    <h1 className="text-xl font-semibold text-foreground">Demandas Insatisfechas</h1>
-    <p className="text-muted-foreground text-sm">
-      {demandas.filter(d => !d.atendido).length} pendientes
-    </p>
-  </div>
-  <button
-    onClick={() => setVerAtendidas(!verAtendidas)}
-    className="text-sm text-muted-foreground hover:text-foreground transition border border-border px-3 py-1.5 rounded-lg"
-  >
-    {verAtendidas ? 'Ocultar atendidas' : 'Ver atendidas'}
-  </button>
-</div>
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Demandas Insatisfechas</h1>
+          <p className="text-muted-foreground text-sm">
+            {demandas.filter(d => !d.atendido).length} pendientes
+          </p>
+        </div>
+        <button
+          onClick={() => setVerAtendidas(!verAtendidas)}
+          className="text-sm text-muted-foreground hover:text-foreground transition border border-border px-3 py-1.5 rounded-lg"
+        >
+          {verAtendidas ? 'Ocultar atendidas' : 'Ver atendidas'}
+        </button>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-12">
@@ -91,7 +94,7 @@ export default function Demandas() {
               </tr>
             </thead>
             <tbody>
-             {demandasMostradas.map((demanda, index) => (
+              {demandasMostradas.map((demanda, index) => (
                 <tr key={demanda._id} className="border-b border-border last:border-0 hover:bg-muted/30">
                   <td className="py-3 px-4 text-muted-foreground text-xs">{index + 1}</td>
                   <td className="py-3 px-4">
@@ -104,10 +107,9 @@ export default function Demandas() {
                     {demanda.categoria || '—'}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`text-sm font-bold ${
-                      demanda.vecessolicitado >= 3 ? 'text-error' :
+                    <span className={`text-sm font-bold ${demanda.vecessolicitado >= 3 ? 'text-error' :
                       demanda.vecessolicitado >= 2 ? 'text-warning' : 'text-foreground'
-                    }`}>
+                      }`}>
                       {demanda.vecessolicitado}x
                     </span>
                   </td>
@@ -118,11 +120,10 @@ export default function Demandas() {
                     {new Date(demanda.createdAt).toLocaleString('es-PE')}
                   </td>
                   <td className="py-3 px-4">
-                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      demanda.atendido
-                        ? 'bg-success/10 text-success'
-                        : 'bg-warning/10 text-warning'
-                    }`}>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${demanda.atendido
+                      ? 'bg-success/10 text-success'
+                      : 'bg-warning/10 text-warning'
+                      }`}>
                       {demanda.atendido ? 'Atendida' : 'Pendiente'}
                     </span>
                   </td>

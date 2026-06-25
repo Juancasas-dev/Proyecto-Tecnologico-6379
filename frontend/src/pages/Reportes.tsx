@@ -12,11 +12,13 @@ interface ReporteRotacion {
 }
 
 interface Demanda {
+    _id: string
     producto: string
     categoria: string
     vecesSolicitado: number
     fecha: string
     vendedor: string
+    productoRef?: { nombre: string; stock: number } | null
 }
 
 interface AjustePerdida {
@@ -46,15 +48,40 @@ interface ProductoReposicion {
     critico: boolean
 }
 
-interface DemandaReposicion {
-    producto: string
-    vecesSolicitado: number
-}
-
 interface Reposicion {
     productos: ProductoReposicion[]
-    demandaNoAtendida: DemandaReposicion[]
 }
+
+// ─── NUEVO: interfaces para el modal HU-21 E4 ─────────────────────────────
+interface Categoria {
+    _id: string
+    nombre: string
+}
+
+interface FormProducto {
+    nombre: string
+    marca: string
+    categoria: string
+    tipoProducto: 'alimento' | 'medicamento' | 'equipamiento'
+    precio: string
+    unidadMedida: string
+    presentacion: string
+    nivelMinimo: string
+    tipo: string
+}
+
+const FORM_VACIO: FormProducto = {
+    nombre: '',
+    marca: '',
+    categoria: '',
+    tipoProducto: 'alimento',
+    precio: '',
+    unidadMedida: '',
+    presentacion: '',
+    nivelMinimo: '0',
+    tipo: ''
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 const API = 'http://localhost:3000/api'
 const getToken = () => localStorage.getItem('token')
@@ -107,6 +134,15 @@ export default function Reportes() {
     const [loadingDemanda, setLoadingDemanda] = useState(false)
     const [demandaConsultada, setDemandaConsultada] = useState(false)
 
+    // ─── NUEVO: estado del modal HU-21 E4 ─────────────────────────────
+    const [categorias, setCategorias] = useState<Categoria[]>([])
+    const [modalCatalogo, setModalCatalogo] = useState(false)
+    const [demandaSeleccionada, setDemandaSeleccionada] = useState<Demanda | null>(null)
+    const [formProducto, setFormProducto] = useState<FormProducto>(FORM_VACIO)
+    const [guardando, setGuardando] = useState(false)
+    const [errorModal, setErrorModal] = useState('')
+    // ──────────────────────────────────────────────────────────────────
+
     const cargarDemandas = async () => {
         try {
             setLoadingDemanda(true)
@@ -123,7 +159,74 @@ export default function Reportes() {
         }
     }
 
+    // ─── NUEVO: cargar categorías para el modal ────────────────────────
+    const cargarCategorias = async () => {
+        try {
+            const { data } = await axios.get(`${API}/categorias`, { headers })
+            setCategorias(data)
+        } catch {
+            console.error('Error al cargar categorías')
+        }
+    }
 
+    const abrirModalCatalogo = (demanda: Demanda) => {
+        setDemandaSeleccionada(demanda)
+        setFormProducto({ ...FORM_VACIO, nombre: demanda.producto })
+        setErrorModal('')
+        setModalCatalogo(true)
+    }
+
+    const cerrarModalCatalogo = () => {
+        setModalCatalogo(false)
+        setDemandaSeleccionada(null)
+        setFormProducto(FORM_VACIO)
+        setErrorModal('')
+    }
+
+    const handleGuardarProducto = async () => {
+        if (!formProducto.nombre.trim()) { setErrorModal('El nombre es obligatorio'); return }
+        if (!formProducto.marca.trim()) { setErrorModal('La marca es obligatoria'); return }
+        if (!formProducto.categoria) { setErrorModal('Selecciona una categoría'); return }
+        if (!formProducto.tipo.trim()) { setErrorModal('El tipo es obligatorio'); return }
+        if (!formProducto.precio || Number(formProducto.precio) <= 0) { setErrorModal('Ingresa un precio válido'); return }
+        if (!formProducto.unidadMedida.trim()) { setErrorModal('La unidad de medida es obligatoria'); return }
+        if (!formProducto.presentacion) { setErrorModal('Selecciona una presentación'); return }
+
+        try {
+            setGuardando(true)
+            setErrorModal('')
+
+            await axios.post(`${API}/productos`, {
+                nombre: formProducto.nombre.trim(),
+                marca: formProducto.marca.trim(),
+                categoria: formProducto.categoria,
+                tipoProducto: formProducto.tipoProducto,
+                tipo: formProducto.tipo.trim(),
+                precio: Number(formProducto.precio),
+                unidadMedida: formProducto.unidadMedida.trim(),
+                presentacion: formProducto.presentacion,
+                nivelMinimo: Number(formProducto.nivelMinimo) || 0,
+                stock: 0
+            }, { headers })
+
+            // Marcar la demanda como atendida
+            if (demandaSeleccionada) {
+                try {
+                    await axios.patch(`${API}/demandas/${demandaSeleccionada._id}/atender`, {}, { headers })
+                } catch {
+                    // no es crítico si falla
+                }
+            }
+
+            cerrarModalCatalogo()
+            cargarDemandas() // recargar para que desaparezca de la lista
+        } catch (err: any) {
+            setErrorModal(err.response?.data?.mensaje || 'Error al crear el producto')
+        } finally {
+            setGuardando(false)
+        }
+    }
+    // ──────────────────────────────────────────────────────────────────
 
     // ── Pérdidas (HU-22) ─────────────────────────────────────────────────
     const [perdidas, setPerdidas] = useState<ReportePerdidas | null>(null)
@@ -136,11 +239,7 @@ export default function Reportes() {
         try {
             setLoadingPerdidas(true)
             const { data } = await axios.get(`${API}/reportes/perdidas`, {
-                params: {
-                    inicio: fechaInicioPerdidas,
-                    fin: fechaFinPerdidas,
-                    causa: causaFiltro
-                },
+                params: { inicio: fechaInicioPerdidas, fin: fechaFinPerdidas, causa: causaFiltro },
                 headers
             })
             setPerdidas(data)
@@ -158,9 +257,7 @@ export default function Reportes() {
                 : { categoria: categoriaReposicion }
 
             const response = await axios.get(`${API}/reportes/${tipo}/pdf`, {
-                params,
-                headers,
-                responseType: 'blob'
+                params, headers, responseType: 'blob'
             })
 
             const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -210,6 +307,10 @@ export default function Reportes() {
         if (vista === 'reposicion') cargarReposicion()
     }, [categoriaReposicion])
 
+    // ─── NUEVO: cargar categorías al montar ───────────────────────────
+    useEffect(() => { cargarCategorias() }, [])
+    // ──────────────────────────────────────────────────────────────────
+
     const productosFiltrados = filtroRotacion === 'todos'
         ? productos
         : productos.filter(p => p.categoria === filtroRotacion)
@@ -235,8 +336,7 @@ export default function Reportes() {
                     <button
                         key={key}
                         onClick={() => setVista(key)}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${vista === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-                            }`}
+                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${vista === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         {label}
                     </button>
@@ -267,15 +367,12 @@ export default function Reportes() {
 
                     <div className="flex gap-2 mb-4 flex-wrap">
                         {[
-                            ['todos', 'Todos'],
-                            ['Alta rotacion', 'Alta'],
-                            ['Rotacion media', 'Media'],
-                            ['Baja rotacion', 'Baja'],
+                            ['todos', 'Todos'], ['Alta rotacion', 'Alta'],
+                            ['Rotacion media', 'Media'], ['Baja rotacion', 'Baja'],
                             ['Sin movimiento', 'Sin movimiento']
                         ].map(([val, label]) => (
                             <button key={val} onClick={() => setFiltroRotacion(val)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${filtroRotacion === val ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                                    }`}>
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${filtroRotacion === val ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'}`}>
                                 {label}
                             </button>
                         ))}
@@ -371,6 +468,7 @@ export default function Reportes() {
                                         <th className="text-left py-3 px-4 text-muted-foreground font-medium">Veces solicitado</th>
                                         <th className="text-left py-3 px-4 text-muted-foreground font-medium">Fecha</th>
                                         <th className="text-left py-3 px-4 text-muted-foreground font-medium">Vendedor</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -385,6 +483,21 @@ export default function Reportes() {
                                                     {new Date(d.fecha).toLocaleString('es-PE')}
                                                 </td>
                                                 <td className="py-3 px-4 text-muted-foreground">{d.vendedor}</td>
+                                                {/* ─── NUEVO: botón HU-21 E4 ─── */}
+                                                <td className="py-3 px-4">
+                                                    {d.productoRef ? (
+                                                        <span className="text-xs px-3 py-1.5 rounded-lg bg-warning/10 text-warning border border-warning/20 whitespace-nowrap">
+                                                            En catálogo — reponer stock
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => abrirModalCatalogo(d)}
+                                                            className="text-xs px-3 py-1.5 rounded-lg border border-primary text-primary hover:bg-primary/10 transition whitespace-nowrap"
+                                                        >
+                                                            + Agregar al catálogo
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))}
                                 </tbody>
@@ -434,7 +547,6 @@ export default function Reportes() {
                         </div>
                     ) : (
                         <>
-                            {/* Resumen totales */}
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                                 <div className="bg-card border border-border rounded-lg p-4">
                                     <p className="text-xs text-muted-foreground mb-1">Total general</p>
@@ -448,12 +560,10 @@ export default function Reportes() {
                                 ))}
                             </div>
 
-                            {/* Filtro por causa */}
                             <div className="flex gap-2 mb-4 flex-wrap">
                                 {['todos', 'Robo o hurto', 'Merma', 'Producto vencido', 'Error de conteo'].map(c => (
                                     <button key={c} onClick={() => setCausaFiltro(c)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${causaFiltro === c ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                                            }`}>
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${causaFiltro === c ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'}`}>
                                         {c === 'todos' ? 'Todas' : c}
                                     </button>
                                 ))}
@@ -462,12 +572,8 @@ export default function Reportes() {
                             {perdidas.detalle.length === 0 ? (
                                 <div className="bg-card border border-border rounded-lg p-12 text-center">
                                     <Icon icon="solar:shield-check-linear" className="text-success mx-auto mb-3" height={36} />
-                                    <p className="text-foreground font-medium mb-1">
-                                        No se registraron pérdidas en este periodo.
-                                    </p>
-                                    <p className="text-muted-foreground text-sm">
-                                        Esto puede indicar un buen control del inventario.
-                                    </p>
+                                    <p className="text-foreground font-medium mb-1">No se registraron pérdidas en este periodo.</p>
+                                    <p className="text-muted-foreground text-sm">Esto puede indicar un buen control del inventario.</p>
                                 </div>
                             ) : (
                                 <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -516,8 +622,7 @@ export default function Reportes() {
                         <div className="flex gap-2 flex-wrap">
                             {['todos', 'alimento', 'medicamento', 'equipamiento'].map(c => (
                                 <button key={c} onClick={() => setCategoriaReposicion(c)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${categoriaReposicion === c ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                                        }`}>
+                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${categoriaReposicion === c ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'}`}>
                                     {c === 'todos' ? 'Todos' : c}
                                 </button>
                             ))}
@@ -541,75 +646,178 @@ export default function Reportes() {
                             <p className="text-foreground font-medium">No hay productos bajo el nivel mínimo</p>
                         </div>
                     ) : (
-                        <>
-                            <div className="bg-card border border-border rounded-lg overflow-hidden mb-6">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b border-border">
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Producto</th>
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Categoría</th>
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Presentación</th>
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Stock</th>
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mínimo</th>
-                                            <th className="text-left py-3 px-4 text-muted-foreground font-medium">Sugerido</th>
+                        <div className="bg-card border border-border rounded-lg overflow-hidden mb-6">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-border">
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Producto</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Categoría</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Presentación</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Stock</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Mínimo</th>
+                                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Sugerido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reposicion.productos.map(p => (
+                                        <tr key={p._id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                                            <td className="py-3 px-4">
+                                                <div className="flex items-center gap-2">
+                                                    {p.critico && (
+                                                        <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-error text-white">
+                                                            CRÍTICO
+                                                        </span>
+                                                    )}
+                                                    <span className="text-foreground font-medium">{p.nombre}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-3 px-4 text-muted-foreground">{p.categoria}</td>
+                                            <td className="py-3 px-4 text-muted-foreground">{p.presentacion}</td>
+                                            <td className={`py-3 px-4 font-semibold ${p.critico ? 'text-error' : 'text-warning'}`}>
+                                                {p.stockActual}
+                                            </td>
+                                            <td className="py-3 px-4 text-muted-foreground">{p.nivelMinimo}</td>
+                                            <td className="py-3 px-4 text-primary font-bold">{p.cantidadSugerida}</td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reposicion.productos.map(p => (
-                                            <tr key={p._id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center gap-2">
-                                                        {p.critico && (
-                                                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-error text-white">
-                                                                CRÍTICO
-                                                            </span>
-                                                        )}
-                                                        <span className="text-foreground font-medium">{p.nombre}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3 px-4 text-muted-foreground">{p.categoria}</td>
-                                                <td className="py-3 px-4 text-muted-foreground">{p.presentacion}</td>
-                                                <td className={`py-3 px-4 font-semibold ${p.critico ? 'text-error' : 'text-warning'}`}>
-                                                    {p.stockActual}
-                                                </td>
-                                                <td className="py-3 px-4 text-muted-foreground">{p.nivelMinimo}</td>
-                                                <td className="py-3 px-4 text-primary font-bold">{p.cantidadSugerida}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Demanda no atendida */}
-                            {reposicion.demandaNoAtendida.length > 0 && (
-                                <div>
-                                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                                        Demanda no atendida (últimos 30 días)
-                                    </h3>
-                                    <div className="bg-card border border-border rounded-lg overflow-hidden">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="border-b border-border">
-                                                    <th className="text-left py-3 px-4 text-muted-foreground font-medium">Producto solicitado</th>
-                                                    <th className="text-left py-3 px-4 text-muted-foreground font-medium">Veces pedido</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {reposicion.demandaNoAtendida.map((d, i) => (
-                                                    <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
-                                                        <td className="py-3 px-4 text-foreground">{d.producto}</td>
-                                                        <td className="py-3 px-4 text-warning font-semibold">{d.vecesSolicitado}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </>
             )}
+
+            {/* ─── NUEVO: Modal agregar al catálogo (HU-21 E4) ─────────────────── */}
+            {modalCatalogo && demandaSeleccionada && (
+                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-5">
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">Agregar al catálogo</h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Solicitado {demandaSeleccionada.vecesSolicitado}x — nombre prellenado desde la demanda
+                                </p>
+                            </div>
+                            <button onClick={cerrarModalCatalogo} className="text-muted-foreground hover:text-foreground">
+                                <Icon icon="solar:close-circle-linear" height={22} />
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            {/* Tipo */}
+                            <div>
+                                <label className="text-sm text-foreground mb-2 block">Tipo de producto</label>
+                                <div className="flex gap-2">
+                                    {(['alimento', 'medicamento', 'equipamiento'] as const).map(tipo => (
+                                        <button key={tipo} type="button"
+                                            onClick={() => setFormProducto(f => ({ ...f, tipoProducto: tipo }))}
+                                            className={`flex-1 py-2 rounded-lg text-xs font-medium border transition capitalize ${formProducto.tipoProducto === tipo ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:border-primary'}`}>
+                                            {tipo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Nombre prellenado */}
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">Nombre <span className="text-error">*</span></label>
+                                <input type="text" value={formProducto.nombre}
+                                    onChange={e => setFormProducto(f => ({ ...f, nombre: e.target.value }))}
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-primary bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                <p className="text-xs text-primary mt-1">Prellenado desde la demanda registrada</p>
+                            </div>
+
+                            {/* Marca */}
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">Marca <span className="text-error">*</span></label>
+                                <input type="text" value={formProducto.marca}
+                                    onChange={e => setFormProducto(f => ({ ...f, marca: e.target.value }))}
+                                    placeholder="Ej: Purina, Royal Canin..."
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                            </div>
+
+                            {/* Categoría */}
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">Categoría <span className="text-error">*</span></label>
+                                <select value={formProducto.categoria}
+                                    onChange={e => setFormProducto(f => ({ ...f, categoria: e.target.value }))}
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                    <option value="">Seleccionar categoría</option>
+                                    {categorias.map(c => (
+                                        <option key={c._id} value={c._id}>{c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tipo (subtipo) */}
+                            <div>
+                                <label className="text-sm text-foreground mb-1 block">Tipo <span className="text-error">*</span></label>
+                                <input type="text" value={formProducto.tipo}
+                                    onChange={e => setFormProducto(f => ({ ...f, tipo: e.target.value }))}
+                                    placeholder="Adulto, Cachorro, Inicio..."
+                                    className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                            </div>
+
+                            {/* Precio y Nivel mínimo */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-sm text-foreground mb-1 block">Precio (S/) <span className="text-error">*</span></label>
+                                    <input type="number" min="0" step="0.01" value={formProducto.precio}
+                                        onChange={e => setFormProducto(f => ({ ...f, precio: e.target.value }))}
+                                        placeholder="0.00"
+                                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-foreground mb-1 block">Nivel mínimo</label>
+                                    <input type="number" min="0" value={formProducto.nivelMinimo}
+                                        onChange={e => setFormProducto(f => ({ ...f, nivelMinimo: e.target.value }))}
+                                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                </div>
+                            </div>
+
+                            {/* Presentación y Unidad */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-sm text-foreground mb-1 block">Presentación <span className="text-error">*</span></label>
+                                    <select value={formProducto.presentacion}
+                                        onChange={e => setFormProducto(f => ({ ...f, presentacion: e.target.value }))}
+                                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-card text-foreground outline-none focus:border-primary transition">
+                                        <option value="">Seleccionar</option>
+                                        <option value="Bolsa">Bolsa</option>
+                                        <option value="Saco">Saco</option>
+                                        <option value="Lata">Lata</option>
+                                        <option value="Frasco">Frasco</option>
+                                        <option value="Blíster">Blíster</option>
+                                        <option value="Gotero">Gotero</option>
+                                        <option value="Bolsa">Bolsa</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm text-foreground mb-1 block">Unidad de medida <span className="text-error">*</span></label>
+                                    <input type="text" value={formProducto.unidadMedida}
+                                        onChange={e => setFormProducto(f => ({ ...f, unidadMedida: e.target.value }))}
+                                        placeholder="Ej: 1kg, 500ml..."
+                                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                                </div>
+                            </div>
+
+                            {errorModal && <p className="text-error text-sm">{errorModal}</p>}
+
+                            <div className="flex gap-3 mt-2">
+                                <button onClick={cerrarModalCatalogo}
+                                    className="flex-1 py-2 rounded-lg border border-border text-muted-foreground hover:bg-muted/30 text-sm transition">
+                                    Cancelar
+                                </button>
+                                <button onClick={handleGuardarProducto} disabled={guardando}
+                                    className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-medium disabled:opacity-50 transition">
+                                    {guardando ? 'Guardando...' : 'Agregar al catálogo'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* ──────────────────────────────────────────────────────────────────── */}
         </div>
     )
 }
