@@ -113,7 +113,9 @@ export const obtenerDemandaInsatisfecha = async (
   try {
     const { inicio, fin } = req.query
 
-    let filtro: any = {}
+    let filtro: any = {
+      atendido: false 
+    }
 
     if (inicio && fin) {
       const desde = new Date(inicio as string)
@@ -127,14 +129,21 @@ export const obtenerDemandaInsatisfecha = async (
     const demandas = await DemandaInsatisfecha
       .find(filtro)
       .populate('registradoPor', 'nombre username')
+      .populate('productoRef', 'nombre stock')  
       .sort({ vecessolicitado: -1 })
 
+      
     const resultado = demandas.map((d: any) => ({
+      _id: d._id, 
       producto: d.producto,
       categoria: d.categoria || 'Sin categoria',
       vecesSolicitado: d.vecessolicitado,
       fecha: d.createdAt,
-      vendedor: d.registradoPor?.nombre || d.registradoPor?.username || 'No registrado'
+      vendedor: d.registradoPor?.nombre || d.registradoPor?.username || 'No registrado',
+       productoRef: d.productoRef ? {       
+    nombre: d.productoRef.nombre,
+    stock: d.productoRef.stock
+  } : null
     }))
 
     return res.json(resultado)
@@ -316,7 +325,7 @@ export const obtenerReposicion = async (req: Request, res: Response) => {
     }
 
     if (categoria && categoria !== 'todos') {
-      filtroProducto.tipoProducto = categoria   // ← corregido
+      filtroProducto.tipoProducto = categoria
     }
 
     const productos = await Producto.find(filtroProducto)
@@ -341,27 +350,8 @@ export const obtenerReposicion = async (req: Request, res: Response) => {
                (b.stockActual / Math.max(b.nivelMinimo, 1))
       })
 
-    const hace30Dias = new Date()
-    hace30Dias.setDate(hace30Dias.getDate() - 30)
-
-    const demandaAgregada = await DemandaInsatisfecha.aggregate([
-      { $match: { createdAt: { $gte: hace30Dias } } },
-      {
-        $group: {
-          _id: '$producto',
-          totalSolicitudes: { $sum: '$vecessolicitado' }
-        }
-      },
-      { $sort: { totalSolicitudes: -1 } }
-    ])
-
-    return res.json({
-      productos: lista,
-      demandaNoAtendida: demandaAgregada.map(d => ({
-        producto: d._id,
-        vecesSolicitado: d.totalSolicitudes
-      }))
-    })
+    
+    return res.json({ productos: lista })
 
   } catch (error) {
     return res.status(500).json({ mensaje: 'Error al obtener listado de reposición' })

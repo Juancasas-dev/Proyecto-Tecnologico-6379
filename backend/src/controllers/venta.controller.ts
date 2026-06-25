@@ -7,11 +7,11 @@ import { HistorialInventario } from '../models/historialInventario.model'
 import { Alerta } from '../models/alerta.model'
 
 export const registrarVenta = async (req: Request, res: Response) => {
-    const session = await mongoose.startSession()
+  const session = await mongoose.startSession()
     session.startTransaction()
 
     try {
-        const { items, tipoPago, numeroBoleta } = req.body
+        const { items, tipoPago, tipoBoleta } = req.body  // ← tipoBoleta en vez de numeroBoleta
         const vendedor = (req as any).usuario.id
 
         if (!items || items.length === 0) {
@@ -19,6 +19,23 @@ export const registrarVenta = async (req: Request, res: Response) => {
             return res.status(400).json({ mensaje: 'La venta debe tener al menos un producto' })
         }
 
+        if (!tipoBoleta || !['B', 'F'].includes(tipoBoleta)) {
+            await session.abortTransaction()
+            return res.status(400).json({ mensaje: 'Debes seleccionar Boleta o Factura' })
+        }
+
+         const prefijo = `${tipoBoleta}001-`
+        const ultimaVenta = await Venta.findOne({
+            numeroBoleta: { $regex: `^${prefijo}` }
+        }).sort({ numeroBoleta: -1 }).session(session)
+
+        let siguienteCorrelativo = '00000001'
+       if (ultimaVenta?.numeroBoleta) {
+    const correlativoActual = parseInt(ultimaVenta.numeroBoleta.split('-')[1] ?? '0')
+    siguienteCorrelativo = String(correlativoActual + 1).padStart(8, '0')
+}
+
+        const numeroBoleta = `${prefijo}${siguienteCorrelativo}`
 
         const erroresStock: string[] = []
         const itemsCompletos = []
@@ -59,7 +76,7 @@ export const registrarVenta = async (req: Request, res: Response) => {
             items: itemsCompletos,
             total,
             tipoPago,
-            numeroBoleta: numeroBoleta || null,
+            numeroBoleta,
             vendedor,
             fecha: new Date()
         }], { session })
