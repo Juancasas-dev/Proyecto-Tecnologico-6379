@@ -17,7 +17,6 @@ interface LoteInfo {
     fechaVencimientoProxima: Date | null
 }
 
-
 interface LoteDesglose {
     loteId: string
     fechaVencimiento: string | null
@@ -33,7 +32,6 @@ interface PreviewLotes {
     desglose: LoteDesglose[]
 }
 
-
 interface ItemVenta {
     productoId: string
     nombre: string
@@ -43,8 +41,6 @@ interface ItemVenta {
     subtotal: number
     stockDisponible: number
     stockInsuficiente: boolean
-    fechaVencimientoProxima?: string
-    estadoCaducidad?: 'normal' | 'proximo' | 'vencido'
 }
 
 const API = 'http://localhost:3000/api'
@@ -56,7 +52,7 @@ export default function Ventas() {
     const [filtroTipo, setFiltroTipo] = useState('todos')
     const [carrito, setCarrito] = useState<ItemVenta[]>([])
     const [tipoPago, setTipoPago] = useState<'efectivo' | 'transferencia'>('efectivo')
-    const [numeroBoleta, setNumeroBoleta] = useState('')
+    const [tipoBoleta, setTipoBoleta] = useState<'B' | 'F'>('B')  // ← reemplaza numeroBoleta
     const [loading, setLoading] = useState(true)
     const [procesando, setProcesando] = useState(false)
     const [ventaExitosa, setVentaExitosa] = useState<any>(null)
@@ -67,17 +63,12 @@ export default function Ventas() {
         stockActual: number
         nivelMinimo: number
     }>>([])
-
-
     const [previewsPorProducto, setPreviewsPorProducto] = useState<Record<string, PreviewLotes>>({})
-  
+    const [lotesPorProducto, setLotesPorProducto] = useState<Record<string, LoteInfo>>({})
 
     const headers = { Authorization: `Bearer ${getToken()}` }
-    const regexBoleta = /^[BF]\d{3}-\d{8}$/
 
-    useEffect(() => {
-        cargarProductos()
-    }, [])
+    useEffect(() => { cargarProductos() }, [])
 
     useEffect(() => {
         if (!ventaExitosa) return
@@ -89,8 +80,6 @@ export default function Ventas() {
         const timer = setTimeout(() => setContador(c => c - 1), 1000)
         return () => clearTimeout(timer)
     }, [ventaExitosa, contador])
-
-    const [lotesPorProducto, setLotesPorProducto] = useState<Record<string, LoteInfo>>({})
 
     const cargarProductos = async () => {
         try {
@@ -115,14 +104,12 @@ export default function Ventas() {
                     const hoy = new Date()
                     const dosSemanas = new Date(hoy.getTime() + 14 * 24 * 60 * 60 * 1000)
                     const unMes = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000)
-
                     let estado: 'normal' | 'proximo' | 'vencido' = 'normal'
 
                     if (data.lotes && data.lotes.length > 0) {
                         const fechas = data.lotes
                             .map((l: any) => new Date(l.fechaVencimiento))
                             .sort((a: Date, b: Date) => a.getTime() - b.getTime())
-
                         if (fechas[0] < hoy) estado = 'vencido'
                         else if (fechas[0] < dosSemanas) estado = 'vencido'
                         else if (fechas[0] < unMes) estado = 'proximo'
@@ -140,7 +127,6 @@ export default function Ventas() {
         setLotesPorProducto(info)
     }
 
-    // ─── NUEVO: llama al endpoint preview y guarda el desglose ────────────
     const cargarPreviewLotes = async (productoId: string, cantidad: number) => {
         try {
             const { data } = await axios.get(`${API}/ventas/preview-lotes`, {
@@ -152,7 +138,6 @@ export default function Ventas() {
             console.error('Error al cargar preview de lotes')
         }
     }
-    // ──────────────────────────────────────────────────────────────────────
 
     const productosFiltrados = useMemo(() => {
         const filtrados = productos.filter(p => {
@@ -162,7 +147,6 @@ export default function Ventas() {
                 p.marca.toLowerCase().includes(busqueda.toLowerCase())
             return coincideTipo && coincideBusqueda
         })
-
         return filtrados.sort((a, b) => {
             const orden: Record<string, number> = { vencido: 0, proximo: 1, normal: 2 }
             const estadoA = lotesPorProducto[a._id]?.estadoCaducidad || 'normal'
@@ -186,19 +170,11 @@ export default function Ventas() {
         setCarrito(prev => {
             const existe = prev.find(i => i.productoId === producto._id)
             const nuevaCantidad = existe ? existe.cantidad + 1 : 1
-
-            // ─── NUEVO: cargar preview con la cantidad actualizada ─────────
             cargarPreviewLotes(producto._id, nuevaCantidad)
-            // ────────────────────────────────────────────────────────────────
 
             if (existe) {
                 return prev.map(i => i.productoId === producto._id
-                    ? {
-                        ...i,
-                        cantidad: nuevaCantidad,
-                        subtotal: nuevaCantidad * i.precio,
-                        stockInsuficiente: nuevaCantidad > i.stockDisponible
-                    }
+                    ? { ...i, cantidad: nuevaCantidad, subtotal: nuevaCantidad * i.precio, stockInsuficiente: nuevaCantidad > i.stockDisponible }
                     : i
                 )
             }
@@ -216,33 +192,21 @@ export default function Ventas() {
     }
 
     const cambiarCantidad = (productoId: string, cantidad: number) => {
-        if (cantidad <= 0) {
-            eliminarDelCarrito(productoId)
-            return
-        }
-        // ─── NUEVO: actualizar preview al cambiar cantidad ─────────────────
+        if (cantidad <= 0) { eliminarDelCarrito(productoId); return }
         cargarPreviewLotes(productoId, cantidad)
-        // ──────────────────────────────────────────────────────────────────
         setCarrito(prev => prev.map(i => i.productoId === productoId
-            ? {
-                ...i,
-                cantidad,
-                subtotal: cantidad * i.precio,
-                stockInsuficiente: cantidad > i.stockDisponible
-            }
+            ? { ...i, cantidad, subtotal: cantidad * i.precio, stockInsuficiente: cantidad > i.stockDisponible }
             : i
         ))
     }
 
     const eliminarDelCarrito = (productoId: string) => {
         setCarrito(prev => prev.filter(i => i.productoId !== productoId))
-        // ─── NUEVO: limpiar preview al eliminar ────────────────────────────
         setPreviewsPorProducto(prev => {
             const nuevo = { ...prev }
             delete nuevo[productoId]
             return nuevo
         })
-        // ──────────────────────────────────────────────────────────────────
     }
 
     const total = carrito.reduce((sum, i) => sum + i.subtotal, 0)
@@ -252,14 +216,6 @@ export default function Ventas() {
         if (carrito.length === 0) return
         if (hayStockInsuficiente) {
             setError('Corrige los productos con stock insuficiente antes de confirmar')
-            return
-        }
-        if (!numeroBoleta.trim()) {
-            setError('El número de boleta es obligatorio')
-            return
-        }
-        if (!regexBoleta.test(numeroBoleta)) {
-            setError('Formato inválido. Usa el formato B001-00001234 o F001-00001234')
             return
         }
 
@@ -273,7 +229,7 @@ export default function Ventas() {
                     cantidad: i.cantidad
                 })),
                 tipoPago,
-                numeroBoleta: numeroBoleta || null
+                tipoBoleta   // ← solo B o F, el backend genera el número
             }, { headers })
 
             setVentaExitosa(data.venta)
@@ -284,11 +240,7 @@ export default function Ventas() {
                 if (prod) {
                     const nuevoStock = prod.stock - item.cantidad
                     if (nuevoStock <= prod.nivelMinimo) {
-                        alertas.push({
-                            nombre: item.nombre,
-                            stockActual: nuevoStock,
-                            nivelMinimo: prod.nivelMinimo || 0
-                        })
+                        alertas.push({ nombre: item.nombre, stockActual: nuevoStock, nivelMinimo: prod.nivelMinimo || 0 })
                     }
                 }
             }
@@ -297,20 +249,17 @@ export default function Ventas() {
                     const nuevas = [...prev]
                     for (const alerta of alertas) {
                         const existe = nuevas.findIndex(a => a.nombre === alerta.nombre)
-                        if (existe >= 0) {
-                            nuevas[existe].stockActual = alerta.stockActual
-                        } else {
-                            nuevas.push(alerta)
-                        }
+                        if (existe >= 0) nuevas[existe].stockActual = alerta.stockActual
+                        else nuevas.push(alerta)
                     }
                     return nuevas.sort((a, b) => a.stockActual - b.stockActual)
                 })
             }
 
             setCarrito([])
-            setPreviewsPorProducto({})   // ← limpiar previews al confirmar
-            setNumeroBoleta('')
+            setPreviewsPorProducto({})
             setTipoPago('efectivo')
+            setTipoBoleta('B')
             cargarProductos()
         } catch (error: any) {
             setError(error.response?.data?.mensaje || 'Error al registrar venta')
@@ -319,14 +268,10 @@ export default function Ventas() {
         }
     }
 
-    // ─── NUEVO: helper para formatear fecha de lote ────────────────────────
     const formatearFecha = (fecha: string | null) => {
         if (!fecha) return 'Sin fecha'
-        return new Date(fecha).toLocaleDateString('es-PE', {
-            day: '2-digit', month: '2-digit', year: 'numeric'
-        })
+        return new Date(fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
     }
-    // ──────────────────────────────────────────────────────────────────────
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -335,31 +280,17 @@ export default function Ventas() {
             <div className="lg:col-span-2">
                 <div className="mb-4">
                     <h1 className="text-xl font-semibold text-foreground mb-4">Registrar Venta</h1>
-
                     <div className="flex gap-2 mb-3 flex-wrap">
                         {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
-                            <button
-                                key={tipo}
-                                onClick={() => setFiltroTipo(tipo)}
-                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${filtroTipo === tipo
-                                    ? 'bg-primary text-white'
-                                    : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
-                                    }`}
-                            >
-                                {tipo === 'todos' ? 'Todos' :
-                                    tipo === 'alimento' ? 'Alimentos' :
-                                        tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
+                            <button key={tipo} onClick={() => setFiltroTipo(tipo)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition ${filtroTipo === tipo ? 'bg-primary text-white' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'}`}>
+                                {tipo === 'todos' ? 'Todos' : tipo === 'alimento' ? 'Alimentos' : tipo === 'medicamento' ? 'Medicamentos' : 'Equipamiento'}
                             </button>
                         ))}
                     </div>
-
-                    <input
-                        type="text"
-                        placeholder="Buscar por nombre o marca..."
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition"
-                    />
+                    <input type="text" placeholder="Buscar por nombre o marca..."
+                        value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                        className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
                 </div>
 
                 {loading ? (
@@ -368,27 +299,24 @@ export default function Ventas() {
                     </div>
                 ) : productosFiltrados.length === 0 ? (
                     <div className="bg-card border border-border rounded-lg p-8 text-center">
-                        <p className="text-muted-foreground text-sm">
-                            No se encontraron productos con ese nombre o código
-                        </p>
+                        <p className="text-muted-foreground text-sm">No se encontraron productos con ese nombre o código</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {productosFiltrados.map(producto => (
-                            <div
-                                key={producto._id}
-                                className={`bg-card border rounded-lg p-4 transition ${lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' &&
-                                        lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
-                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                            <div key={producto._id}
+                                className={`bg-card border rounded-lg p-4 transition ${
+                                    lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' &&
+                                    lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
+                                    new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
                                         ? 'border-error opacity-50 cursor-not-allowed'
                                         : lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido'
                                             ? 'border-error cursor-pointer hover:border-error/80'
                                             : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
                                                 ? 'border-warning cursor-pointer hover:border-warning/80'
                                                 : 'border-border cursor-pointer hover:border-primary'
-                                    }`}
-                                onClick={() => agregarAlCarrito(producto)}
-                            >
+                                }`}
+                                onClick={() => agregarAlCarrito(producto)}>
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="font-medium text-foreground text-sm">{producto.nombre}</p>
@@ -397,19 +325,14 @@ export default function Ventas() {
                                     <Icon icon="solar:add-circle-linear" className="text-primary" height={20} />
                                 </div>
                                 <div className="flex justify-between items-center mt-2">
-                                    <span className="text-primary font-semibold text-sm">
-                                        S/ {producto.precio.toFixed(2)}
-                                    </span>
-                                    <span className={`text-xs ${producto.stock === 0 ? 'text-error' :
-                                        producto.stock <= 5 ? 'text-warning' : 'text-success'
-                                        }`}>
+                                    <span className="text-primary font-semibold text-sm">S/ {producto.precio.toFixed(2)}</span>
+                                    <span className={`text-xs ${producto.stock === 0 ? 'text-error' : producto.stock <= 5 ? 'text-warning' : 'text-success'}`}>
                                         Stock: {producto.stock}
                                     </span>
                                 </div>
-
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' && (
                                     lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
-                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                                    new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
                                         ? <span className="text-xs text-error font-medium">Producto vencido</span>
                                         : <span className="text-xs text-error font-medium">Vence en menos de 2 semanas</span>
                                 )}
@@ -443,49 +366,28 @@ export default function Ventas() {
                                         <div key={item.productoId} className={`p-3 rounded-lg border ${item.stockInsuficiente ? 'border-error bg-error/5' : 'border-border'}`}>
                                             <div className="flex justify-between items-start mb-1">
                                                 <p className="text-sm font-medium text-foreground">{item.nombre}</p>
-                                                <button
-                                                    onClick={() => eliminarDelCarrito(item.productoId)}
-                                                    className="text-muted-foreground hover:text-error transition"
-                                                >
+                                                <button onClick={() => eliminarDelCarrito(item.productoId)}
+                                                    className="text-muted-foreground hover:text-error transition">
                                                     <Icon icon="solar:close-circle-linear" height={16} />
                                                 </button>
                                             </div>
-
                                             {item.stockInsuficiente && (
-                                                <p className="text-xs text-error mb-1">
-                                                    Stock insuficiente. Disponibles: {item.stockDisponible}
-                                                </p>
+                                                <p className="text-xs text-error mb-1">Stock insuficiente. Disponibles: {item.stockDisponible}</p>
                                             )}
-
                                             <div className="flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => cambiarCantidad(item.productoId, item.cantidad - 1)}
-                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
-                                                    >
-                                                        -
-                                                    </button>
-                                                    <span className="text-sm font-medium text-foreground w-6 text-center">
-                                                        {item.cantidad}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => cambiarCantidad(item.productoId, item.cantidad + 1)}
-                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs"
-                                                    >
-                                                        +
-                                                    </button>
+                                                    <button onClick={() => cambiarCantidad(item.productoId, item.cantidad - 1)}
+                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs">-</button>
+                                                    <span className="text-sm font-medium text-foreground w-6 text-center">{item.cantidad}</span>
+                                                    <button onClick={() => cambiarCantidad(item.productoId, item.cantidad + 1)}
+                                                        className="w-6 h-6 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 transition text-xs">+</button>
                                                 </div>
-                                                <span className="text-sm font-semibold text-foreground">
-                                                    S/ {item.subtotal.toFixed(2)}
-                                                </span>
+                                                <span className="text-sm font-semibold text-foreground">S/ {item.subtotal.toFixed(2)}</span>
                                             </div>
 
-                                            {/* ── NUEVO: desglose de lotes FEFO ─────────────────────── */}
                                             {preview && preview.desglose.length > 0 && (
                                                 <div className="mt-2 pt-2 border-t border-border/50">
-                                                    <p className="text-xs text-muted-foreground mb-1 font-medium">
-                                                        Despacho:
-                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mb-1 font-medium">Despacho:</p>
                                                     <div className="space-y-1">
                                                         {preview.desglose.map(lote => (
                                                             <div key={lote.loteId} className="flex items-center gap-1.5 flex-wrap">
@@ -502,13 +404,10 @@ export default function Ventas() {
                                                         ))}
                                                     </div>
                                                     {!preview.alcanza && (
-                                                        <p className="text-xs text-error mt-1">
-                                                            Stock insuficiente en lotes vigentes
-                                                        </p>
+                                                        <p className="text-xs text-error mt-1">Stock insuficiente en lotes vigentes</p>
                                                     )}
                                                 </div>
                                             )}
-                                            {/* ───────────────────────────────────────────────────────── */}
                                         </div>
                                     )
                                 })}
@@ -521,50 +420,41 @@ export default function Ventas() {
                                 </div>
                             </div>
 
+                            {/* Tipo de pago */}
                             <div className="mb-4">
                                 <label className="text-sm text-foreground mb-2 block">Tipo de pago</label>
                                 <div className="flex gap-2">
                                     {(['efectivo', 'transferencia'] as const).map(tipo => (
-                                        <button
-                                            key={tipo}
-                                            onClick={() => setTipoPago(tipo)}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${tipoPago === tipo
-                                                ? 'bg-primary text-white border-primary'
-                                                : 'border-border text-muted-foreground hover:border-primary'
-                                                }`}
-                                        >
+                                        <button key={tipo} onClick={() => setTipoPago(tipo)}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${tipoPago === tipo ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:border-primary'}`}>
                                             {tipo === 'efectivo' ? '💵 Efectivo' : '📱 Transferencia'}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
+                            {/* ─── Tipo de comprobante — reemplaza el input de boleta ─── */}
                             <div className="mb-4">
-                                <label className="text-sm text-foreground mb-1 block">
-                                    N° Boleta / Factura
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="B001-00001234 o F001-00001234"
-                                    value={numeroBoleta}
-                                    onChange={e => setNumeroBoleta(e.target.value.toUpperCase())}
-                                    maxLength={13}
-                                    className="w-full rounded-lg px-4 py-2.5 text-sm border-2 border-primary/40 bg-transparent text-foreground outline-none focus:border-primary transition placeholder:text-muted-foreground/60"
-                                />
+                                <label className="text-sm text-foreground mb-2 block">Tipo de comprobante</label>
+                                <div className="flex gap-2">
+                                    {(['B', 'F'] as const).map(tipo => (
+                                        <button key={tipo} onClick={() => setTipoBoleta(tipo)}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${tipoBoleta === tipo ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:border-primary'}`}>
+                                            {tipo === 'B' ? '🧾 Boleta' : '📄 Factura'}
+                                        </button>
+                                    ))}
+                                </div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    Puedes completarlo ahora o después de la venta
+                                    El número se genera automáticamente ({tipoBoleta}001-XXXXXXXX)
                                 </p>
                             </div>
+                            {/* ──────────────────────────────────────────────────────────── */}
 
-                            {error && (
-                                <p className="text-error text-sm text-center mb-3">{error}</p>
-                            )}
+                            {error && <p className="text-error text-sm text-center mb-3">{error}</p>}
 
-                            <button
-                                onClick={handleConfirmar}
+                            <button onClick={handleConfirmar}
                                 disabled={procesando || hayStockInsuficiente || carrito.length === 0}
-                                className="w-full h-11 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primaryemphasis disabled:opacity-50 transition"
-                            >
+                                className="w-full h-11 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primaryemphasis disabled:opacity-50 transition">
                                 {procesando ? 'Procesando...' : `Confirmar venta — S/ ${total.toFixed(2)}`}
                             </button>
                         </>
@@ -586,16 +476,12 @@ export default function Ventas() {
                             {alertasStock.map((alerta, i) => (
                                 <div key={i} className="bg-warning/10 rounded-lg px-3 py-2">
                                     <p className="text-sm font-medium text-foreground">{alerta.nombre}</p>
-                                    <p className="text-xs text-warning">
-                                        {alerta.stockActual} unidades restantes — Mínimo: {alerta.nivelMinimo}
-                                    </p>
+                                    <p className="text-xs text-warning">{alerta.stockActual} unidades restantes — Mínimo: {alerta.nivelMinimo}</p>
                                 </div>
                             ))}
                         </div>
-                        <button
-                            onClick={() => setAlertasStock([])}
-                            className="w-full py-2 rounded-lg bg-warning text-white text-sm font-medium hover:opacity-90 transition"
-                        >
+                        <button onClick={() => setAlertasStock([])}
+                            className="w-full py-2 rounded-lg bg-warning text-white text-sm font-medium hover:opacity-90 transition">
                             Entendido
                         </button>
                     </div>
@@ -622,46 +508,27 @@ export default function Ventas() {
                                 <span className="text-foreground">Total</span>
                                 <span className="text-primary">S/ {ventaExitosa.total?.toFixed(2)}</span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-2 capitalize">
-                                Pago: {ventaExitosa.tipoPago}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-2 capitalize">Pago: {ventaExitosa.tipoPago}</p>
+                            {/* ─── NUEVO: mostrar número generado ─── */}
+                            {ventaExitosa.numeroBoleta && (
+                                <p className="text-xs text-primary font-medium mt-1">
+                                    Comprobante: {ventaExitosa.numeroBoleta}
+                                </p>
+                            )}
                         </div>
-
-                        {!ventaExitosa.numeroBoleta && (
-                            <button
-                                onClick={() => {
-                                    const boleta = prompt('Ingresa el número de boleta:')
-                                    if (boleta) {
-                                        axios.patch(`${API}/ventas/${ventaExitosa._id}/boleta`,
-                                            { numeroBoleta: boleta },
-                                            { headers }
-                                        ).then(() => {
-                                            setVentaExitosa((prev: any) => ({ ...prev, numeroBoleta: boleta }))
-                                        })
-                                    }
-                                }}
-                                className="text-primary text-sm hover:underline mb-3 block"
-                            >
-                                + Agregar número de boleta
-                            </button>
-                        )}
 
                         <div className="bg-primary/10 rounded-lg px-4 py-2 mb-4">
                             <p className="text-primary text-sm">
                                 Cerrando en <strong>{contador}</strong> segundos...
                             </p>
                             <div className="w-full bg-primary/20 rounded-full h-1 mt-2">
-                                <div
-                                    className="bg-primary h-1 rounded-full transition-all duration-1000"
-                                    style={{ width: `${(contador / 3) * 100}%` }}
-                                />
+                                <div className="bg-primary h-1 rounded-full transition-all duration-1000"
+                                    style={{ width: `${(contador / 3) * 100}%` }} />
                             </div>
                         </div>
 
-                        <button
-                            onClick={() => { setVentaExitosa(null); setContador(3) }}
-                            className="text-muted-foreground text-sm hover:underline"
-                        >
+                        <button onClick={() => { setVentaExitosa(null); setContador(3) }}
+                            className="text-muted-foreground text-sm hover:underline">
                             Cerrar ahora
                         </button>
                     </div>

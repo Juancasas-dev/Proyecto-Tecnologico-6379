@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Icon } from '@iconify/react'
 import axios from 'axios'
+import { useSearchParams, useNavigate } from 'react-router-dom'  // ← nuevo
 import {
     useReactTable,
     getCoreRowModel,
@@ -72,6 +73,11 @@ export default function CatalogoProductos() {
     const [camposError, setCamposError] = useState<string[]>([])
     const [productoDuplicadoId, setProductoDuplicadoId] = useState<string | null>(null)
 
+    // ─── NUEVO ────────────────────────────────────────────────────────────
+    const [searchParams] = useSearchParams()
+    const navigate = useNavigate()
+    // ──────────────────────────────────────────────────────────────────────
+
     const colorCategoria = (nombre: string) => {
         const colores: Record<string, string> = {
             'Perros': 'bg-blue-500/10 text-blue-400',
@@ -136,7 +142,33 @@ export default function CatalogoProductos() {
         }
     }
 
-    useEffect(() => { cargarDatos() }, [])
+    // ─── NUEVO: detectar params al cargar ────────────────────────────────
+    useEffect(() => {
+        cargarDatos().then(() => {
+            const nombreParam = searchParams.get('nombre')
+            const demandaId = searchParams.get('demandaId')
+
+            if (nombreParam) {
+                setForm({
+                    nombre: nombreParam,
+                    marca: '',
+                    categoria: '',
+                    tipo: '',
+                    precio: '',
+                    unidadMedida: '',
+                    presentacion: '',
+                    nivelMinimo: '0',
+                    tipoProducto: ''
+                })
+                setProductoEditando(null)
+                setFormError('')
+                setCamposError([])
+                if (demandaId) sessionStorage.setItem('demandaIdPendiente', demandaId)
+                setModalAbierto(true)
+            }
+        })
+    }, [])
+    // ──────────────────────────────────────────────────────────────────────
 
     const abrirModalNuevo = () => {
         setProductoEditando(null)
@@ -200,7 +232,24 @@ export default function CatalogoProductos() {
                     precio: Number(form.precio),
                     nivelMinimo: Number(form.nivelMinimo)
                 }, { headers })
+
+                // ─── NUEVO: marcar demanda como atendida si viene del flujo HU-21 ───
+                const demandaIdPendiente = sessionStorage.getItem('demandaIdPendiente')
+                if (demandaIdPendiente) {
+                    try {
+                        await axios.patch(`${API}/demandas/${demandaIdPendiente}/atender`, {}, { headers })
+                    } catch {
+                        // no es crítico si falla, el producto ya fue creado
+                    } finally {
+                        sessionStorage.removeItem('demandaIdPendiente')
+                    }
+                    setModalAbierto(false)
+                    navigate('/dashboard/demandas')
+                    return
+                }
+                // ────────────────────────────────────────────────────────────────────
             }
+
             setModalAbierto(false)
             cargarDatos()
         } catch (error: any) {
@@ -395,7 +444,6 @@ export default function CatalogoProductos() {
 
     return (
         <div>
-            {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h1 className="text-xl font-semibold text-foreground">Catálogo de Productos</h1>
@@ -414,7 +462,6 @@ export default function CatalogoProductos() {
                 )}
             </div>
 
-            {/* Filtros por tipo */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
                 {['todos', 'alimento', 'medicamento', 'equipamiento'].map(tipo => (
                     <button
@@ -432,7 +479,6 @@ export default function CatalogoProductos() {
                 ))}
             </div>
 
-            {/* Buscador */}
             <div className="mb-4">
                 <input
                     type="text"
@@ -443,7 +489,6 @@ export default function CatalogoProductos() {
                 />
             </div>
 
-            {/* Tabla */}
             {loading ? (
                 <div className="flex justify-center py-12">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -512,7 +557,6 @@ export default function CatalogoProductos() {
                         </TableBody>
                     </Table>
 
-                    {/* Paginación */}
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border flex-wrap gap-3">
                         <div className="flex gap-2">
                             <button
@@ -558,10 +602,24 @@ export default function CatalogoProductos() {
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
                     <div className="bg-card border border-border rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-5">
-                            <h2 className="text-lg font-semibold text-foreground">
-                                {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
-                            </h2>
-                            <button onClick={() => setModalAbierto(false)} className="text-muted-foreground hover:text-foreground">
+                            <div>
+                                <h2 className="text-lg font-semibold text-foreground">
+                                    {productoEditando ? 'Editar Producto' : 'Nuevo Producto'}
+                                </h2>
+                                {/* ─── NUEVO: indicador si viene de demanda ─── */}
+                                {searchParams.get('demandaId') && !productoEditando && (
+                                    <p className="text-xs text-primary mt-0.5">
+                                        Nombre prellenado desde demanda insatisfecha
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    sessionStorage.removeItem('demandaIdPendiente')
+                                    setModalAbierto(false)
+                                }}
+                                className="text-muted-foreground hover:text-foreground"
+                            >
                                 <Icon icon="solar:close-circle-linear" height={22} />
                             </button>
                         </div>
@@ -670,6 +728,7 @@ export default function CatalogoProductos() {
                     </div>
                 </div>
             )}
+
             {/* Modal demanda insatisfecha */}
             {modalDemanda && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
@@ -696,8 +755,7 @@ export default function CatalogoProductos() {
                                     value={formDemanda.producto}
                                     onChange={e => setFormDemanda({ ...formDemanda, producto: e.target.value })}
                                     placeholder="Nombre del producto solicitado"
-                                    className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${errorDemanda ? 'border-error' : 'border-border focus:border-primary'
-                                        }`}
+                                    className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${errorDemanda ? 'border-error' : 'border-border focus:border-primary'}`}
                                 />
                                 {errorDemanda && (
                                     <p className="text-error text-xs mt-1">{errorDemanda}</p>
