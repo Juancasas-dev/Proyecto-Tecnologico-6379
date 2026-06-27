@@ -43,6 +43,9 @@ interface ItemVenta {
     stockInsuficiente: boolean
 }
 
+const MOTIVOS_ANULAR = ['Error de registro', 'Devolucion total', 'Producto defectuoso', 'Otro']
+const MOTIVOS_MODIFICAR = ['Error de registro', 'Cambio de producto por solicitud del cliente', 'Producto defectuoso', 'Otro']
+
 const API = 'http://localhost:3000/api'
 const getToken = () => localStorage.getItem('token')
 
@@ -52,11 +55,10 @@ export default function Ventas() {
     const [filtroTipo, setFiltroTipo] = useState('todos')
     const [carrito, setCarrito] = useState<ItemVenta[]>([])
     const [tipoPago, setTipoPago] = useState<'efectivo' | 'transferencia'>('efectivo')
-    const [tipoBoleta, setTipoBoleta] = useState<'B' | 'F'>('B')  // ← reemplaza numeroBoleta
+    const [tipoBoleta, setTipoBoleta] = useState<'B' | 'F'>('B')
     const [loading, setLoading] = useState(true)
     const [procesando, setProcesando] = useState(false)
     const [ventaExitosa, setVentaExitosa] = useState<any>(null)
-    const [contador, setContador] = useState(3)
     const [error, setError] = useState('')
     const [alertasStock, setAlertasStock] = useState<Array<{
         nombre: string
@@ -66,20 +68,27 @@ export default function Ventas() {
     const [previewsPorProducto, setPreviewsPorProducto] = useState<Record<string, PreviewLotes>>({})
     const [lotesPorProducto, setLotesPorProducto] = useState<Record<string, LoteInfo>>({})
 
+    // ─── Estados modales anular ───────────────────────────────────────────
+    const [modalAnular, setModalAnular] = useState(false)
+    const [motivoAnular, setMotivoAnular] = useState('')
+    const [anulando, setAnulando] = useState(false)
+    const [errorAnular, setErrorAnular] = useState('')
+
+    // ─── Estados modales modificar ────────────────────────────────────────
+    const [modalModificar, setModalModificar] = useState(false)
+    const [motivoModificar, setMotivoModificar] = useState('')
+    const [itemsModificar, setItemsModificar] = useState<{
+        productoId: string
+        nombre: string
+        cantidad: number
+        precio: number
+    }[]>([])
+    const [modificando, setModificando] = useState(false)
+    const [errorModificar, setErrorModificar] = useState('')
+
     const headers = { Authorization: `Bearer ${getToken()}` }
 
     useEffect(() => { cargarProductos() }, [])
-
-    useEffect(() => {
-        if (!ventaExitosa) return
-        if (contador === 0) {
-            setVentaExitosa(null)
-            setContador(3)
-            return
-        }
-        const timer = setTimeout(() => setContador(c => c - 1), 1000)
-        return () => clearTimeout(timer)
-    }, [ventaExitosa, contador])
 
     const cargarProductos = async () => {
         try {
@@ -105,7 +114,6 @@ export default function Ventas() {
                     const dosSemanas = new Date(hoy.getTime() + 14 * 24 * 60 * 60 * 1000)
                     const unMes = new Date(hoy.getTime() + 30 * 24 * 60 * 60 * 1000)
                     let estado: 'normal' | 'proximo' | 'vencido' = 'normal'
-
                     if (data.lotes && data.lotes.length > 0) {
                         const fechas = data.lotes
                             .map((l: any) => new Date(l.fechaVencimiento))
@@ -114,11 +122,7 @@ export default function Ventas() {
                         else if (fechas[0] < dosSemanas) estado = 'vencido'
                         else if (fechas[0] < unMes) estado = 'proximo'
                     }
-
-                    info[p._id] = {
-                        estadoCaducidad: estado,
-                        fechaVencimientoProxima: data.lotes?.[0]?.fechaVencimiento || null
-                    }
+                    info[p._id] = { estadoCaducidad: estado, fechaVencimientoProxima: data.lotes?.[0]?.fechaVencimiento || null }
                 } catch {
                     info[p._id] = { estadoCaducidad: 'normal', fechaVencimientoProxima: null }
                 }
@@ -130,8 +134,7 @@ export default function Ventas() {
     const cargarPreviewLotes = async (productoId: string, cantidad: number) => {
         try {
             const { data } = await axios.get(`${API}/ventas/preview-lotes`, {
-                params: { productoId, cantidad },
-                headers
+                params: { productoId, cantidad }, headers
             })
             setPreviewsPorProducto(prev => ({ ...prev, [productoId]: data }))
         } catch {
@@ -157,36 +160,25 @@ export default function Ventas() {
 
     const agregarAlCarrito = (producto: Producto) => {
         const infoLote = lotesPorProducto[producto._id]
-        if (
-            infoLote?.estadoCaducidad === 'vencido' &&
-            infoLote?.fechaVencimientoProxima &&
-            new Date(infoLote.fechaVencimientoProxima) < new Date()
-        ) {
+        if (infoLote?.estadoCaducidad === 'vencido' && infoLote?.fechaVencimientoProxima &&
+            new Date(infoLote.fechaVencimientoProxima) < new Date()) {
             setError('No se puede vender un producto vencido')
             setTimeout(() => setError(''), 3000)
             return
         }
-
         setCarrito(prev => {
             const existe = prev.find(i => i.productoId === producto._id)
             const nuevaCantidad = existe ? existe.cantidad + 1 : 1
             cargarPreviewLotes(producto._id, nuevaCantidad)
-
             if (existe) {
                 return prev.map(i => i.productoId === producto._id
                     ? { ...i, cantidad: nuevaCantidad, subtotal: nuevaCantidad * i.precio, stockInsuficiente: nuevaCantidad > i.stockDisponible }
-                    : i
-                )
+                    : i)
             }
             return [...prev, {
-                productoId: producto._id,
-                nombre: producto.nombre,
-                marca: producto.marca,
-                precio: producto.precio,
-                cantidad: 1,
-                subtotal: producto.precio,
-                stockDisponible: producto.stock,
-                stockInsuficiente: false
+                productoId: producto._id, nombre: producto.nombre, marca: producto.marca,
+                precio: producto.precio, cantidad: 1, subtotal: producto.precio,
+                stockDisponible: producto.stock, stockInsuficiente: false
             }]
         })
     }
@@ -196,17 +188,12 @@ export default function Ventas() {
         cargarPreviewLotes(productoId, cantidad)
         setCarrito(prev => prev.map(i => i.productoId === productoId
             ? { ...i, cantidad, subtotal: cantidad * i.precio, stockInsuficiente: cantidad > i.stockDisponible }
-            : i
-        ))
+            : i))
     }
 
     const eliminarDelCarrito = (productoId: string) => {
         setCarrito(prev => prev.filter(i => i.productoId !== productoId))
-        setPreviewsPorProducto(prev => {
-            const nuevo = { ...prev }
-            delete nuevo[productoId]
-            return nuevo
-        })
+        setPreviewsPorProducto(prev => { const n = { ...prev }; delete n[productoId]; return n })
     }
 
     const total = carrito.reduce((sum, i) => sum + i.subtotal, 0)
@@ -214,34 +201,20 @@ export default function Ventas() {
 
     const handleConfirmar = async () => {
         if (carrito.length === 0) return
-        if (hayStockInsuficiente) {
-            setError('Corrige los productos con stock insuficiente antes de confirmar')
-            return
-        }
-
-        setProcesando(true)
-        setError('')
-
+        if (hayStockInsuficiente) { setError('Corrige los productos con stock insuficiente antes de confirmar'); return }
+        setProcesando(true); setError('')
         try {
             const { data } = await axios.post(`${API}/ventas`, {
-                items: carrito.map(i => ({
-                    productoId: i.productoId,
-                    cantidad: i.cantidad
-                })),
-                tipoPago,
-                tipoBoleta   // ← solo B o F, el backend genera el número
+                items: carrito.map(i => ({ productoId: i.productoId, cantidad: i.cantidad })),
+                tipoPago, tipoBoleta
             }, { headers })
-
             setVentaExitosa(data.venta)
-
             const alertas: Array<{ nombre: string; stockActual: number; nivelMinimo: number }> = []
             for (const item of carrito) {
                 const prod = productos.find(p => p._id === item.productoId)
                 if (prod) {
                     const nuevoStock = prod.stock - item.cantidad
-                    if (nuevoStock <= prod.nivelMinimo) {
-                        alertas.push({ nombre: item.nombre, stockActual: nuevoStock, nivelMinimo: prod.nivelMinimo || 0 })
-                    }
+                    if (nuevoStock <= prod.nivelMinimo) alertas.push({ nombre: item.nombre, stockActual: nuevoStock, nivelMinimo: prod.nivelMinimo || 0 })
                 }
             }
             if (alertas.length > 0) {
@@ -255,16 +228,56 @@ export default function Ventas() {
                     return nuevas.sort((a, b) => a.stockActual - b.stockActual)
                 })
             }
-
-            setCarrito([])
-            setPreviewsPorProducto({})
-            setTipoPago('efectivo')
-            setTipoBoleta('B')
+            setCarrito([]); setPreviewsPorProducto({}); setTipoPago('efectivo'); setTipoBoleta('B')
             cargarProductos()
         } catch (error: any) {
             setError(error.response?.data?.mensaje || 'Error al registrar venta')
         } finally {
             setProcesando(false)
+        }
+    }
+
+    // ─── Anular ───────────────────────────────────────────────────────────
+    const handleAnular = async () => {
+        if (!motivoAnular) { setErrorAnular('Debes seleccionar un motivo'); return }
+        setAnulando(true); setErrorAnular('')
+        try {
+            await axios.patch(`${API}/ventas/${ventaExitosa._id}/anular`, { motivo: motivoAnular }, { headers })
+            setModalAnular(false); setMotivoAnular('')
+            setVentaExitosa(null);
+            cargarProductos()
+        } catch (e: any) {
+            setErrorAnular(e.response?.data?.mensaje || 'Error al anular')
+        } finally {
+            setAnulando(false)
+        }
+    }
+
+    // ─── Modificar ────────────────────────────────────────────────────────
+    const abrirModalModificar = () => {
+        setItemsModificar(ventaExitosa.items.map((i: any) => ({
+            productoId: i.producto?._id || i.producto || i._id,
+            nombre: i.nombre, cantidad: i.cantidad, precio: i.precioUnitario
+        })))
+        setMotivoModificar(''); setErrorModificar(''); setModalModificar(true)
+    }
+
+    const handleModificar = async () => {
+        if (!motivoModificar) { setErrorModificar('Debes seleccionar un motivo'); return }
+        if (itemsModificar.some(i => i.cantidad <= 0)) { setErrorModificar('Todas las cantidades deben ser mayores a 0'); return }
+        setModificando(true); setErrorModificar('')
+        try {
+            const { data } = await axios.patch(`${API}/ventas/${ventaExitosa._id}/modificar`, {
+                items: itemsModificar.map(i => ({ productoId: i.productoId, cantidad: i.cantidad })),
+                motivo: motivoModificar
+            }, { headers })
+            setModalModificar(false)
+            setVentaExitosa(data.venta)
+            cargarProductos()
+        } catch (e: any) {
+            setErrorModificar(e.response?.data?.mensaje || 'Error al modificar')
+        } finally {
+            setModificando(false)
         }
     }
 
@@ -305,17 +318,16 @@ export default function Ventas() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {productosFiltrados.map(producto => (
                             <div key={producto._id}
-                                className={`bg-card border rounded-lg p-4 transition ${
-                                    lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' &&
-                                    lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
-                                    new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                                className={`bg-card border rounded-lg p-4 transition ${lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' &&
+                                        lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
+                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
                                         ? 'border-error opacity-50 cursor-not-allowed'
                                         : lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido'
                                             ? 'border-error cursor-pointer hover:border-error/80'
                                             : lotesPorProducto[producto._id]?.estadoCaducidad === 'proximo'
                                                 ? 'border-warning cursor-pointer hover:border-warning/80'
                                                 : 'border-border cursor-pointer hover:border-primary'
-                                }`}
+                                    }`}
                                 onClick={() => agregarAlCarrito(producto)}>
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -332,7 +344,7 @@ export default function Ventas() {
                                 </div>
                                 {lotesPorProducto[producto._id]?.estadoCaducidad === 'vencido' && (
                                     lotesPorProducto[producto._id]?.fechaVencimientoProxima &&
-                                    new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
+                                        new Date(lotesPorProducto[producto._id]!.fechaVencimientoProxima!) < new Date()
                                         ? <span className="text-xs text-error font-medium">Producto vencido</span>
                                         : <span className="text-xs text-error font-medium">Vence en menos de 2 semanas</span>
                                 )}
@@ -348,10 +360,7 @@ export default function Ventas() {
             {/* Panel derecho — carrito */}
             <div className="lg:col-span-1">
                 <div className="bg-card border border-border rounded-lg p-5 sticky top-6">
-                    <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">
-                        Resumen de venta
-                    </h2>
-
+                    <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Resumen de venta</h2>
                     {carrito.length === 0 ? (
                         <div className="text-center py-8">
                             <Icon icon="solar:cart-large-2-linear" className="text-muted-foreground mx-auto mb-2" height={32} />
@@ -384,7 +393,6 @@ export default function Ventas() {
                                                 </div>
                                                 <span className="text-sm font-semibold text-foreground">S/ {item.subtotal.toFixed(2)}</span>
                                             </div>
-
                                             {preview && preview.desglose.length > 0 && (
                                                 <div className="mt-2 pt-2 border-t border-border/50">
                                                     <p className="text-xs text-muted-foreground mb-1 font-medium">Despacho:</p>
@@ -403,9 +411,7 @@ export default function Ventas() {
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    {!preview.alcanza && (
-                                                        <p className="text-xs text-error mt-1">Stock insuficiente en lotes vigentes</p>
-                                                    )}
+                                                    {!preview.alcanza && <p className="text-xs text-error mt-1">Stock insuficiente en lotes vigentes</p>}
                                                 </div>
                                             )}
                                         </div>
@@ -420,7 +426,6 @@ export default function Ventas() {
                                 </div>
                             </div>
 
-                            {/* Tipo de pago */}
                             <div className="mb-4">
                                 <label className="text-sm text-foreground mb-2 block">Tipo de pago</label>
                                 <div className="flex gap-2">
@@ -433,7 +438,6 @@ export default function Ventas() {
                                 </div>
                             </div>
 
-                            {/* ─── Tipo de comprobante — reemplaza el input de boleta ─── */}
                             <div className="mb-4">
                                 <label className="text-sm text-foreground mb-2 block">Tipo de comprobante</label>
                                 <div className="flex gap-2">
@@ -448,7 +452,6 @@ export default function Ventas() {
                                     El número se genera automáticamente ({tipoBoleta}001-XXXXXXXX)
                                 </p>
                             </div>
-                            {/* ──────────────────────────────────────────────────────────── */}
 
                             {error && <p className="text-error text-sm text-center mb-3">{error}</p>}
 
@@ -509,28 +512,125 @@ export default function Ventas() {
                                 <span className="text-primary">S/ {ventaExitosa.total?.toFixed(2)}</span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 capitalize">Pago: {ventaExitosa.tipoPago}</p>
-                            {/* ─── NUEVO: mostrar número generado ─── */}
                             {ventaExitosa.numeroBoleta && (
-                                <p className="text-xs text-primary font-medium mt-1">
-                                    Comprobante: {ventaExitosa.numeroBoleta}
-                                </p>
+                                <p className="text-xs text-primary font-medium mt-1">Comprobante: {ventaExitosa.numeroBoleta}</p>
+                            )}
+
+                            {/* Botones anular y modificar */}
+                            {ventaExitosa.estado !== 'anulada' && (
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => { setMotivoAnular(''); setErrorAnular(''); setModalAnular(true) }}
+                                        className="flex-1 bg-error/10 text-error border border-error/30 py-2 rounded-lg text-sm font-medium hover:bg-error/20 transition">
+                                        Anular venta
+                                    </button>
+                                    <button
+                                        onClick={abrirModalModificar}
+                                        className="flex-1 bg-warning/10 text-warning border border-warning/30 py-2 rounded-lg text-sm font-medium hover:bg-warning/20 transition">
+                                        Modificar
+                                    </button>
+                                </div>
                             )}
                         </div>
 
-                        <div className="bg-primary/10 rounded-lg px-4 py-2 mb-4">
-                            <p className="text-primary text-sm">
-                                Cerrando en <strong>{contador}</strong> segundos...
-                            </p>
-                            <div className="w-full bg-primary/20 rounded-full h-1 mt-2">
-                                <div className="bg-primary h-1 rounded-full transition-all duration-1000"
-                                    style={{ width: `${(contador / 3) * 100}%` }} />
-                            </div>
+                        <button
+                            onClick={() => { setVentaExitosa(null); }}
+                            className="w-full h-11 rounded-lg bg-primary text-white font-semibold text-sm hover:bg-primaryemphasis transition mb-4">
+                            Cerrar
+                        </button>
+
+
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Anular */}
+            {modalAnular && (
+                <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center px-4">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-6">
+                        <div className="flex justify-between items-center mb-1">
+                            <h3 className="text-lg font-semibold text-foreground">Anular venta</h3>
+                            <button onClick={() => setModalAnular(false)} className="text-muted-foreground hover:text-foreground">
+                                <Icon icon="solar:close-circle-linear" height={22} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">Selecciona el motivo. Los productos volverán al stock.</p>
+                        <div className="space-y-2 mb-4">
+                            {MOTIVOS_ANULAR.map(m => (
+                                <label key={m} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${motivoAnular === m ? 'border-error bg-error/5' : 'border-border hover:border-error/50'}`}>
+                                    <input type="radio" name="motivoAnular" value={m} checked={motivoAnular === m}
+                                        onChange={() => setMotivoAnular(m)} className="accent-error" />
+                                    <span className="text-sm text-foreground">{m}</span>
+                                </label>
+                            ))}
+                        </div>
+                        {errorAnular && <p className="text-error text-sm mb-3">{errorAnular}</p>}
+                        <div className="flex gap-2">
+                            <button onClick={() => setModalAnular(false)}
+                                className="flex-1 border border-border text-muted-foreground py-2 rounded-lg text-sm hover:bg-muted/30 transition">
+                                Cancelar
+                            </button>
+                            <button onClick={handleAnular} disabled={anulando}
+                                className="flex-1 bg-error text-white py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition">
+                                {anulando ? 'Anulando...' : 'Confirmar anulación'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Modificar */}
+            {modalModificar && (
+                <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center px-4">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-1">
+                            <h3 className="text-lg font-semibold text-foreground">Modificar venta</h3>
+                            <button onClick={() => setModalModificar(false)} className="text-muted-foreground hover:text-foreground">
+                                <Icon icon="solar:close-circle-linear" height={22} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">Ajusta las cantidades y selecciona el motivo.</p>
+
+                        <div className="space-y-2 mb-4">
+                            {itemsModificar.map((item, i) => (
+                                <div key={i} className="flex items-center justify-between border border-border rounded-lg p-3">
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">{item.nombre}</p>
+                                        <p className="text-xs text-muted-foreground">S/ {item.precio?.toFixed(2)} c/u</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => setItemsModificar(prev => prev.map((it, idx) => idx === i ? { ...it, cantidad: Math.max(1, it.cantidad - 1) } : it))}
+                                            className="w-7 h-7 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 text-sm font-bold">−</button>
+                                        <span className="text-sm font-semibold text-foreground w-6 text-center">{item.cantidad}</span>
+                                        <button onClick={() => setItemsModificar(prev => prev.map((it, idx) => idx === i ? { ...it, cantidad: it.cantidad + 1 } : it))}
+                                            className="w-7 h-7 rounded-full bg-muted/30 text-foreground flex items-center justify-center hover:bg-muted/50 text-sm font-bold">+</button>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
 
-                        <button onClick={() => { setVentaExitosa(null); setContador(3) }}
-                            className="text-muted-foreground text-sm hover:underline">
-                            Cerrar ahora
-                        </button>
+                        <p className="text-sm font-medium text-foreground mb-2">Motivo del cambio</p>
+                        <div className="space-y-2 mb-4">
+                            {MOTIVOS_MODIFICAR.map(m => (
+                                <label key={m} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${motivoModificar === m ? 'border-warning bg-warning/5' : 'border-border hover:border-warning/50'}`}>
+                                    <input type="radio" name="motivoModificar" value={m} checked={motivoModificar === m}
+                                        onChange={() => setMotivoModificar(m)} className="accent-warning" />
+                                    <span className="text-sm text-foreground">{m}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        {errorModificar && <p className="text-error text-sm mb-3">{errorModificar}</p>}
+                        <div className="flex gap-2">
+                            <button onClick={() => setModalModificar(false)}
+                                className="flex-1 border border-border text-muted-foreground py-2 rounded-lg text-sm hover:bg-muted/30 transition">
+                                Cancelar
+                            </button>
+                            <button onClick={handleModificar} disabled={modificando}
+                                className="flex-1 bg-warning text-white py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition">
+                                {modificando ? 'Guardando...' : 'Confirmar cambio'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

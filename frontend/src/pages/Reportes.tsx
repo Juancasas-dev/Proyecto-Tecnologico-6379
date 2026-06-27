@@ -107,6 +107,12 @@ export default function Reportes() {
 
     // ── Rotación ─────────────────────────────────────────────────────────
     const [productos, setProductos] = useState<ReporteRotacion[]>([])
+    const [resumenRotacion, setResumenRotacion] = useState<{
+        totalSoles: number
+        numeroTransacciones: number
+        ticketPromedio: number
+    } | null>(null)
+
     const [filtroRotacion, setFiltroRotacion] = useState('todos')
     const [fechaInicioRotacion, setFechaInicioRotacion] = useState('')
     const [fechaFinRotacion, setFechaFinRotacion] = useState('')
@@ -119,7 +125,8 @@ export default function Reportes() {
                 params: { inicio: fechaInicioRotacion, fin: fechaFinRotacion },
                 headers
             })
-            setProductos(data)
+            setProductos(data.productos)
+            setResumenRotacion(data.resumen)
         } catch (error) {
             console.error(error)
         } finally {
@@ -364,6 +371,29 @@ export default function Reportes() {
                             Buscar
                         </button>
                     </div>
+                    {/* Tarjetas resumen — van antes de los filtros de rotación */}
+                    {resumenRotacion && (
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-card border border-border rounded-lg p-4">
+                                <p className="text-xs text-muted-foreground mb-1">Total en soles</p>
+                                <p className="text-lg font-bold text-primary">
+                                    S/ {resumenRotacion.totalSoles.toFixed(2)}
+                                </p>
+                            </div>
+                            <div className="bg-card border border-border rounded-lg p-4">
+                                <p className="text-xs text-muted-foreground mb-1">Transacciones</p>
+                                <p className="text-lg font-bold text-foreground">
+                                    {resumenRotacion.numeroTransacciones}
+                                </p>
+                            </div>
+                            <div className="bg-card border border-border rounded-lg p-4">
+                                <p className="text-xs text-muted-foreground mb-1">Ticket promedio</p>
+                                <p className="text-lg font-bold text-foreground">
+                                    S/ {resumenRotacion.ticketPromedio.toFixed(2)}
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex gap-2 mb-4 flex-wrap">
                         {[
