@@ -19,6 +19,7 @@ import Demandas from '../pages/Demandas'
 import AjusteStock from '../pages/AjusteStock'
 import ResumenTurnos from '../pages/ResumenTurnos'
 import Reportes from '../pages/Reportes'
+import Trazabilidad from '../pages/Trazabilidad'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -130,6 +131,12 @@ export default function Router() {
           <Route path="/dashboard/reportes" element={
             <DuenoRoute>
               <Reportes />
+            </DuenoRoute>
+          } />
+
+          <Route path="/dashboard/trazabilidad" element={
+            <DuenoRoute>
+              <Trazabilidad />
             </DuenoRoute>
           } />
           <Route path="/dashboard/alertas" element={

@@ -4,7 +4,9 @@ import {
   listarVentas,
   agregarBoleta,
   obtenerVenta,
-  previewLotes
+  previewLotes,
+  anularVenta,
+  modificarVenta
 } from '../controllers/venta.controller'
 import { verificarToken } from '../middlewares/auth.middleware'
 import { verificarRol } from '../middlewares/rol.middleware'
@@ -16,5 +18,7 @@ router.get('/',              verificarToken, verificarRol('vendedor', 'dueño'),
 router.get('/preview-lotes', verificarToken, previewLotes)                       
 router.get('/:id',           verificarToken, verificarRol('vendedor', 'dueño'), obtenerVenta)
 router.patch('/:id/boleta',  verificarToken, verificarRol('vendedor', 'dueño'), agregarBoleta)
+router.patch('/:id/anular',  verificarToken, verificarRol('vendedor', 'dueño'), anularVenta)
+router.patch('/:id/modificar',verificarToken, verificarRol('vendedor', 'dueño'), modificarVenta)
 
 export default router

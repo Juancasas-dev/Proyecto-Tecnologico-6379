@@ -90,6 +90,12 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/reportes',
       },
       {
+        name: 'Trazabilidad',        
+        icon: 'solar:shield-check-linear',
+        id: uniqueId(),
+        url: '/dashboard/trazabilidad',
+      },
+      {
         name: 'Demandas',
         icon: 'solar:clipboard-list-linear',
         id: uniqueId(),
@@ -102,18 +108,7 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/ajustes',
       },
     ],
-  },
-  {
-    heading: 'CUENTA',
-    children: [
-      {
-        name: 'Mi Perfil',
-        icon: 'solar:user-circle-linear',
-        id: uniqueId(),
-        url: '/dashboard/perfil',
-      },
-    ],
-  },
+  }
 ]
 
 export default SidebarContent

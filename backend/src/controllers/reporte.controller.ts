@@ -100,7 +100,16 @@ export const obtenerRotacionProductos = async (
 
     ranking.sort((a, b) => b.unidadesVendidas - a.unidadesVendidas)
 
-    return res.json(ranking)
+    return res.json({
+    resumen: {
+        totalSoles: totalVentasPeriodo,
+        numeroTransacciones: ventas.length,
+        ticketPromedio: ventas.length > 0
+            ? Math.round((totalVentasPeriodo / ventas.length) * 100) / 100
+            : 0
+    },
+    productos: ranking
+})
   } catch (error) {
     return res.status(500).json({ mensaje: 'Error al obtener rotacion' })
   }
