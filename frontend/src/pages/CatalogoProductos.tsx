@@ -40,6 +40,7 @@ interface Producto {
     nivelMinimo: number
     stock: number
     activo: boolean
+    proveedor?: { _id: string; nombre: string } | null
 }
 
 interface LoteInfo {
@@ -312,6 +313,15 @@ export default function CatalogoProductos() {
                 <Badge className={`text-xs px-2 py-1 rounded-full ${colorCategoria(row.original.categoria?.nombre)}`}>
                     {row.original.categoria?.nombre || '—'}
                 </Badge>
+            )
+        },
+        {
+            id: 'proveedor',
+            header: 'Proveedor',
+            cell: ({ row }: { row: any }) => (
+                <span className="text-muted-foreground text-sm">
+                    {row.original.proveedor?.nombre || '—'}
+                </span>
             )
         },
         {
