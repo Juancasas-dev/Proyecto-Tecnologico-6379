@@ -20,6 +20,7 @@ import AjusteStock from '../pages/AjusteStock'
 import ResumenTurnos from '../pages/ResumenTurnos'
 import Reportes from '../pages/Reportes'
 import Trazabilidad from '../pages/Trazabilidad'
+import Proveedores from '../pages/Proveedores'
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -117,6 +118,11 @@ export default function Router() {
             <NegocioRoute>
               <Categorias />
             </NegocioRoute>
+          } />
+          <Route path="/dashboard/proveedores" element={
+            <DuenoRoute>
+              <Proveedores />
+            </DuenoRoute>
           } />
           <Route path="/dashboard/turno" element={
             <NegocioRoute>

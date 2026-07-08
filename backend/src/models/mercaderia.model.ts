@@ -7,46 +7,23 @@ export interface IMercaderia extends Document {
   fechaIngreso: Date
   fechaVencimiento: Date
   creadoPor: Schema.Types.ObjectId | null
-  bloqueado: boolean                        
+  bloqueado: boolean
+  proveedor?: Schema.Types.ObjectId      
+  numeroDocumento?: string               
+  referenciaIngreso?: string             
 }
 
 const MercaderiaSchema = new Schema<IMercaderia>({
-  producto: {
-    type: Schema.Types.ObjectId,
-    ref: 'Producto',
-    required: true
-  },
-  cantidad: {
-    type: Number,
-    required: true,
-    min: 1
-  },
-  cantidadRestante: {
-    type: Number,
-    required: true
-  },
-  fechaIngreso: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  fechaVencimiento: {
-    type: Date,
-    required: false,
-    default: null
-  },
-  bloqueado: {
-    type: Boolean,
-    default: false                          
-  },
-  creadoPor: {
-    type: Schema.Types.ObjectId,
-    ref: 'Usuario',
-    default: null
-  }
+  producto:          { type: Schema.Types.ObjectId, ref: 'Producto', required: true },
+  cantidad:          { type: Number, required: true, min: 1 },
+  cantidadRestante:  { type: Number, required: true },
+  fechaIngreso:      { type: Date, required: true, default: Date.now },
+  fechaVencimiento:  { type: Date, required: false, default: null },
+  bloqueado:         { type: Boolean, default: false },
+  creadoPor:         { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
+  proveedor:         { type: Schema.Types.ObjectId, ref: 'Proveedor', default: null },   
+  numeroDocumento:   { type: String, default: '' },                                      
+  referenciaIngreso: { type: String, default: '' }                                        
 }, { timestamps: true })
 
-export const Mercaderia = model<IMercaderia>(
-  'Mercaderia',
-  MercaderiaSchema
-)
+export const Mercaderia = model<IMercaderia>('Mercaderia', MercaderiaSchema)

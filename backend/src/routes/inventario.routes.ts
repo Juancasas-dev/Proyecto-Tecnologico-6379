@@ -12,6 +12,7 @@ import {
 } from '../controllers/inventario.controller'
 import { verificarToken } from '../middlewares/auth.middleware'
 import { verificarRol } from '../middlewares/rol.middleware'
+import { registrarIngresoMasivo } from '../controllers/inventario.controller'
 
 
 const router = Router()
@@ -25,4 +26,5 @@ router.delete('/ingresos/:id', verificarToken, verificarRol('dueño'), eliminarI
 router.post('/ajustes',verificarToken,verificarRol('dueño'),ajustarInventario)
 router.get('/turno', verificarToken, obtenerMovimientosTurno)
 router.get('/historial-ajustes', verificarToken, verificarRol('dueño'), listarHistorialAjustes)
+router.post('/ingresos/masivo', verificarToken, verificarRol('dueño'), registrarIngresoMasivo)
 export default router
