@@ -32,12 +32,6 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/productos',
       },
       {
-        name: 'Categorías',
-        icon: 'solar:tag-linear',
-        id: uniqueId(),
-        url: '/dashboard/categorias',
-      },
-      {
         name: 'Mercaderia',
         icon: 'solar:arrow-up-linear',
         id: uniqueId(),
@@ -78,6 +72,18 @@ const SidebarContent: MenuItem[] = [
     heading: 'GESTIÓN',
     children: [
       {
+        name: 'Categorías',
+        icon: 'solar:tag-linear',
+        id: uniqueId(),
+        url: '/dashboard/categorias',
+      },
+      {
+        name: 'Proveedores',
+        icon: 'solar:box-linear',
+        id: uniqueId(),
+        url: '/dashboard/proveedores',
+      },
+      {
         name: 'Usuarios',
         icon: 'solar:users-group-rounded-linear',
         id: uniqueId(),
@@ -90,7 +96,7 @@ const SidebarContent: MenuItem[] = [
         url: '/dashboard/reportes',
       },
       {
-        name: 'Trazabilidad',        
+        name: 'Trazabilidad',
         icon: 'solar:shield-check-linear',
         id: uniqueId(),
         url: '/dashboard/trazabilidad',

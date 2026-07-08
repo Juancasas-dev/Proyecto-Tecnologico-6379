@@ -13,6 +13,7 @@ export interface IProducto extends Document {
   stock: number 
   activo: boolean
   creadoPor: Schema.Types.ObjectId | null
+  proveedor?: Schema.Types.ObjectId 
 }
 
 const ProductoSchema = new Schema<IProducto>({
@@ -27,7 +28,8 @@ const ProductoSchema = new Schema<IProducto>({
   nivelMinimo:  { type: Number, default: 0 },
   stock:          { type: Number, default: 0 },
   activo:       { type: Boolean, default: true },
-  creadoPor:    { type: Schema.Types.ObjectId, ref: 'Usuario', default: null }
+  creadoPor:    { type: Schema.Types.ObjectId, ref: 'Usuario', default: null },
+  proveedor:     { type: Schema.Types.ObjectId, ref: 'Proveedor', default: null } 
 }, { timestamps: true })
 
 ProductoSchema.index({ nombre: 1, marca: 1, presentacion: 1 }, { unique: true })
