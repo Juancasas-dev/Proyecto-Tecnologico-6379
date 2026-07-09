@@ -29,26 +29,17 @@ const Profile = () => {
     }
   }
 
-
-  const menuItems = [
-    {
-      title: 'Mi Perfil',
-      icon: 'tabler:user',
-      url: '/dashboard/perfil'
-    },
-
-    ...(usuario.rol === 'dueño' ? [{
-      title: 'Gestión de Usuarios',
-      icon: 'tabler:users',
-      url: '/dashboard/usuarios'
-    }] : []),
-
-    ...(usuario.rol === 'dueño' ? [{
-      title: 'Reportes',
-      icon: 'tabler:chart-bar',
-      url: '/dashboard/reportes'
-    }] : []),
-  ]
+  const menuItems = usuario.rol === 'dueño'
+    ? [
+        { title: 'Gestión de Usuarios', icon: 'solar:users-group-rounded-linear', url: '/dashboard/usuarios' },
+        { title: 'Trazabilidad', icon: 'solar:shield-check-linear', url: '/dashboard/trazabilidad' },
+        { title: 'Reportes', icon: 'solar:chart-linear', url: '/dashboard/reportes' },
+      ]
+    : [
+        { title: 'Ventas', icon: 'solar:cart-large-2-linear', url: '/dashboard/ventas' },
+        { title: 'Alertas', icon: 'solar:bell-linear', url: '/dashboard/alertas' },
+        { title: 'Resumen de turno', icon: 'solar:clock-circle-linear', url: '/dashboard/turno' },
+      ]
 
   return (
     <div className="relative ps-1 sm:ps-15 shrink-0">
@@ -66,11 +57,8 @@ const Profile = () => {
           </div>
           <DropdownMenuSeparator />
           {menuItems.map((item, index) => (
-            <DropdownMenuItem
-              key={index}
-              asChild
-              className="px-4 py-2 flex items-center gap-3 cursor-pointer"
-            >
+            <DropdownMenuItem key={index} asChild
+              className="px-4 py-2 flex items-center gap-3 cursor-pointer">
               <Link to={item.url}>
                 <Icon icon={item.icon} className="text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">{item.title}</span>
@@ -79,11 +67,8 @@ const Profile = () => {
           ))}
           <DropdownMenuSeparator className="my-2" />
           <div className="px-4">
-            <Button
-              onClick={cerrarSesion}
-              variant="outline"
-              className="w-full rounded-md text-sm"
-            >
+            <Button onClick={cerrarSesion} variant="outline"
+              className="w-full rounded-md text-sm">
               Cerrar sesión
             </Button>
           </div>
