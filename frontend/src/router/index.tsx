@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import React from 'react'
 import Login from '../views/authentication/Login'
-import Register from '../views/authentication/Register'
 import ForgotPassword from '../views/authentication/ForgotPassword'
 import Dashboard from '../pages/Dashboard'
 import AdminDashboard from '../pages/AdminDashboard'
@@ -21,6 +20,8 @@ import ResumenTurnos from '../pages/ResumenTurnos'
 import Reportes from '../pages/Reportes'
 import Trazabilidad from '../pages/Trazabilidad'
 import Proveedores from '../pages/Proveedores'
+import ResetPassword from '../views/authentication/ResetPassword'
+
 
 const token = () => localStorage.getItem('token')
 const rol = () => JSON.parse(localStorage.getItem('usuario') || '{}')?.rol
@@ -75,9 +76,8 @@ export default function Router() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
         <Route path="/admin" element={
           <AdminRoute>
             <AdminDashboard />
