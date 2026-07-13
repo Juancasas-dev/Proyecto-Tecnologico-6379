@@ -1,7 +1,16 @@
 import { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { Usuario } from '../models/usuario.model'
+import { Auditoria } from '../models/auditoria.model'
 import { enviarEmail } from '../config/email'
+
+const MOTIVOS_DESACTIVACION = [
+  'Renuncia',
+  'Despido',
+  'Cuenta Comprometida',
+  'Finalización de contrato',
+  'Otra causa'
+]
 
 export const listarUsuarios = async (req: Request, res: Response) => {
   const usuarios = await Usuario.find()
@@ -38,6 +47,18 @@ const validarDatosUsuario = (nombre: string, username: string, email: string, pa
     errores.push('La contraseña debe tener al menos 8 caracteres')
   }
 
+  return errores
+}
+
+// Reutilizable en edición de perfil (mismas reglas de nombre que en creación)
+const validarNombre = (nombre: string) => {
+  const errores: string[] = []
+  if (nombre.trim().length < 3 || nombre.trim().length > 50) {
+    errores.push('El nombre debe tener entre 3 y 50 caracteres')
+  }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim())) {
+    errores.push('El nombre solo puede contener letras y espacios')
+  }
   return errores
 }
 
@@ -120,23 +141,68 @@ export const crearUsuario = async (req: Request, res: Response) => {
   })
 }
 
+
 export const cambiarEstado = async (req: Request, res: Response) => {
   const { id } = req.params
-  const { activo } = req.body
+
+  if (!id || typeof id !== 'string') {
+    res.status(400).json({ mensaje: 'ID de usuario inválido' })
+    return
+  }
+
+  const { activo, motivo, detalle } = req.body
+  const adminId = (req as any).usuario.id
+
+  if (activo === false) {
+    if (!motivo || !MOTIVOS_DESACTIVACION.includes(motivo)) {
+      res.status(400).json({ mensaje: 'Debe seleccionar un motivo válido de desactivación' })
+      return
+    }
+    if (!detalle || detalle.trim().length < 10) {
+      res.status(400).json({ mensaje: 'El detalle del motivo debe tener al menos 10 caracteres' })
+      return
+    }
+  }
+
+  const usuarioAnterior = await Usuario.findById(id)
+  if (!usuarioAnterior) {
+    res.status(404).json({ mensaje: 'Usuario no encontrado' })
+    return
+  }
+
+  const camposDesactivacion: Record<string, any> = activo === false
+    ? {
+        motivoDesactivacion: motivo,
+        detalleDesactivacion: detalle.trim(),
+        fechaDesactivacion: new Date(),
+        desactivadoPor: adminId
+      }
+    : {
+        motivoDesactivacion: null,
+        detalleDesactivacion: null,
+        fechaDesactivacion: null,
+        desactivadoPor: null
+      }
 
   const usuario = await Usuario.findByIdAndUpdate(
     id,
     { 
       activo,
-      tokenInvalidadoEn: activo === false ? new Date() : null
+      tokenInvalidadoEn: activo === false ? new Date() : null,
+      ...camposDesactivacion
     },
     { returnDocument: 'after' } 
   ).select('-password')
 
-  if (!usuario) {
-    res.status(404).json({ mensaje: 'Usuario no encontrado' })
-    return
-  }
+  await Auditoria.create({
+    usuarioModificadoId: id,
+    accion: activo === false ? 'DESACTIVACION' : 'ACTIVACION',
+    camposAlterados: activo === false
+      ? { activo: { antes: usuarioAnterior.activo, despues: false }, motivo, detalle: detalle.trim() }
+      : { activo: { antes: usuarioAnterior.activo, despues: true } },
+    adminResponsableId: adminId,
+    fechaHora: new Date()
+  })
 
   res.json({ 
     mensaje: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente`,
@@ -145,8 +211,102 @@ export const cambiarEstado = async (req: Request, res: Response) => {
 }
 
 
+export const editarPerfil = async (req: Request, res: Response) => {
+  const { id } = req.params
+
+  if (!id || typeof id !== 'string') {
+    res.status(400).json({ mensaje: 'ID de usuario inválido' })
+    return
+  }
+
+  const { nombre, email } = req.body
+  const adminId = (req as any).usuario.id
+
+  const usuario = await Usuario.findById(id)
+  if (!usuario) {
+    res.status(404).json({ mensaje: 'Usuario no encontrado' })
+    return
+  }
+
+
+  if (email && email.toLowerCase() !== usuario.email) {
+    const existeEmail = await Usuario.findOne({
+      email: email.toLowerCase(),
+      _id: { $ne: id }
+    })
+
+    if (existeEmail) {
+      res.status(409).json({
+        campo: 'email',
+        mensaje: 'El correo electrónico ingresado ya pertenece a otro usuario registrado en el sistema'
+      })
+      return
+    }
+  }
+
+  if (nombre && nombre.trim() !== usuario.nombre) {
+    const erroresNombre = validarNombre(nombre)
+    if (erroresNombre.length > 0) {
+      res.status(400).json({ mensaje: erroresNombre[0] })
+      return
+    }
+  }
+
+  const camposAlterados: Record<string, any> = {}
+
+  if (nombre && nombre.trim() !== usuario.nombre) {
+    camposAlterados.nombre = { antes: usuario.nombre, despues: nombre.trim() }
+    usuario.nombre = nombre.trim()
+  }
+
+  if (email && email.toLowerCase() !== usuario.email) {
+    camposAlterados.email = { antes: usuario.email, despues: email.toLowerCase() }
+    usuario.email = email.toLowerCase()
+  }
+
+  if (Object.keys(camposAlterados).length === 0) {
+    const { password: _sinCambios, ...usuarioSinPassword } = usuario.toObject()
+    res.json({ mensaje: 'No se detectaron cambios', usuario: usuarioSinPassword })
+    return
+  }
+
+  try {
+    await usuario.save()
+  } catch (err: any) {
+ 
+    if (err.code === 11000) {
+      res.status(409).json({
+        campo: 'email',
+        mensaje: 'El correo electrónico ingresado ya pertenece a otro usuario registrado en el sistema'
+      })
+      return
+    }
+    throw err
+  }
+
+  await Auditoria.create({
+    usuarioModificadoId: usuario._id,
+    accion: 'EDICION_PERFIL',
+    camposAlterados,
+    adminResponsableId: adminId,
+    fechaHora: new Date()
+  })
+
+  const { password: _, ...usuarioSinPassword } = usuario.toObject()
+
+  res.json({
+    mensaje: 'Perfil actualizado correctamente',
+    usuario: usuarioSinPassword
+  })
+}
+
 export const desbloquearUsuario = async (req: Request, res: Response) => {
   const { id } = req.params
+
+  if (!id || typeof id !== 'string') {
+    res.status(400).json({ mensaje: 'ID de usuario inválido' })
+    return
+  }
 
   const usuario = await Usuario.findByIdAndUpdate(
     id,

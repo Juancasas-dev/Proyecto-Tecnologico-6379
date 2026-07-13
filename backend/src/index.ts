@@ -16,6 +16,7 @@ import { iniciarAlertasCron } from './services/alerta-cron.service'
 import reporteRoutes from './routes/reporte.routes'
 import trazabilidadRoutes from './routes/trazabilidad.routes'
 import proveedorRoutes from './routes/proveedor.routes'
+import dashboardRoutes from './routes/dashboard.routes'
 
 dotenv.config()
 connectDB().then(() => {
@@ -39,4 +40,6 @@ app.use('/api/alertas', alertaRoutes)
 app.use('/api/reportes', reporteRoutes)
 app.use('/api/trazabilidad', trazabilidadRoutes)
 app.use('/api/proveedores', proveedorRoutes)
+app.use('/api/dashboard', dashboardRoutes)
+
 app.listen(3000, () => console.log('Servidor en puerto 3000'))
