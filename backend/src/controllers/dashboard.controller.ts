@@ -13,8 +13,13 @@ const obtenerRango = (periodo: string) => {
 
     switch (periodo) {
         case 'hoy':
-            inicio.setUTCHours(5, 0, 0, 0)
-            break
+      inicio.setUTCHours(5, 0, 0, 0)
+      
+      if (new Date().getUTCHours() < 5) {
+        inicio.setUTCDate(inicio.getUTCDate() - 1)
+      }
+     
+      break
         case 'semana':
             inicio.setDate(ahora.getDate() - 7)
             inicio.setUTCHours(5, 0, 0, 0)
