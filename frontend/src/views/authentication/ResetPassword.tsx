@@ -58,8 +58,7 @@ export default function ResetPassword() {
     setGuardando(true)
     setMensaje('')
     try {
-      const { data } = await axios.post(`${API}/auth/reset-password`, { token, password })
-      // Éxito — redirigir al login con mensaje
+      await axios.post(`${import.meta.env.VITE_API_URL}/auth/reset-password`, { token, password })
       navigate('/login?reset=true')
     } catch (error: any) {
       const msg = error.response?.data?.mensaje || 'Error al cambiar contraseña'
