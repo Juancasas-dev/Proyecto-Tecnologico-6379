@@ -13,7 +13,7 @@ const FullLayout = () => {
     const cargarAlertas = async () => {
       try {
         const token = localStorage.getItem('token')
-        const { data } = await axios.get('http://localhost:3000/api/alertas', {
+       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/alertas`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         if (data.length > 0) {
