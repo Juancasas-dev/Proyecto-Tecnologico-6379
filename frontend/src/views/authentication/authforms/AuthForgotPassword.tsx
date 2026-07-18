@@ -4,7 +4,7 @@ import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import axios from 'axios'
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 
 const AuthForgotPassword = () => {
   const [email, setEmail] = useState('')

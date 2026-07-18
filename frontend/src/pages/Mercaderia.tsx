@@ -38,7 +38,7 @@ const TIPOS_DOCUMENTO = [
   { label: 'Guía de Remisión', prefijo: 'GR' },
 ]
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 const getToken = () => localStorage.getItem('token')
 const getUsuario = () => JSON.parse(localStorage.getItem('usuario') || '{}')
 const formatearFecha = (fecha: string) => new Date(fecha).toLocaleDateString('es-PE')

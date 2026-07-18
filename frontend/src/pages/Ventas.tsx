@@ -46,7 +46,7 @@ interface ItemVenta {
 const MOTIVOS_ANULAR = ['Error de registro', 'Devolucion total', 'Producto defectuoso', 'Otro']
 const MOTIVOS_MODIFICAR = ['Error de registro', 'Cambio de producto por solicitud del cliente', 'Producto defectuoso', 'Otro']
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 const getToken = () => localStorage.getItem('token')
 
 export default function Ventas() {

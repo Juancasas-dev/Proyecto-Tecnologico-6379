@@ -8,7 +8,7 @@ import {
   Tooltip as BTooltip, ResponsiveContainer as BResponsiveContainer
 } from 'recharts'
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 const getToken = () => localStorage.getItem('token')
 
 const COLORES_DONA = ['#5d87ff', '#49beff', '#13deb9', '#ffae1f', '#fa896b', '#6f42c1']

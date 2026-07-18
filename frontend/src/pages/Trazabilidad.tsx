@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Icon } from '@iconify/react'
 import axios from 'axios'
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 const getToken = () => localStorage.getItem('token')
 
 interface ProductoVenta {

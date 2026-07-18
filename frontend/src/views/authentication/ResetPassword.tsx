@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 
-const API = 'http://localhost:3000/api'
+const API = import.meta.env.VITE_API_URL
 
 type EstadoToken = 'validando' | 'valido' | 'invalido'
 
