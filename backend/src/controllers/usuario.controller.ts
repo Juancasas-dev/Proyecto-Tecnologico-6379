@@ -14,7 +14,7 @@ const MOTIVOS_DESACTIVACION = [
 
 export const listarUsuarios = async (req: Request, res: Response) => {
   const usuarios = await Usuario.find()
-    .select('-password')  
+    .select('-password')
     .populate('creadoPor', 'nombre username')
 
   res.json(usuarios)
@@ -97,9 +97,9 @@ export const crearUsuario = async (req: Request, res: Response) => {
   })
 
   await enviarEmail(
-  email,
-  'Bienvenido a SIVWEB — Tus credenciales de acceso',
-  `
+    email,
+    'Bienvenido a SIVWEB — Tus credenciales de acceso',
+    `
   <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
     <h2 style="color: #5d87ff;">Bienvenido a SIVWEB</h2>
     <p>Hola <strong>${nombre}</strong>,</p>
@@ -131,11 +131,11 @@ export const crearUsuario = async (req: Request, res: Response) => {
     </p>
   </div>
   `
-)
+  )
 
   const { password: _, ...usuarioSinPassword } = usuario.toObject()
 
-  res.status(201).json({ 
+  res.status(201).json({
     mensaje: 'Usuario creado y credenciales enviadas por email',
     usuario: usuarioSinPassword
   })
@@ -172,26 +172,26 @@ export const cambiarEstado = async (req: Request, res: Response) => {
 
   const camposDesactivacion: Record<string, any> = activo === false
     ? {
-        motivoDesactivacion: motivo,
-        detalleDesactivacion: detalle.trim(),
-        fechaDesactivacion: new Date(),
-        desactivadoPor: adminId
-      }
+      motivoDesactivacion: motivo,
+      detalleDesactivacion: detalle.trim(),
+      fechaDesactivacion: new Date(),
+      desactivadoPor: adminId
+    }
     : {
-        motivoDesactivacion: null,
-        detalleDesactivacion: null,
-        fechaDesactivacion: null,
-        desactivadoPor: null
-      }
+      motivoDesactivacion: null,
+      detalleDesactivacion: null,
+      fechaDesactivacion: null,
+      desactivadoPor: null
+    }
 
   const usuario = await Usuario.findByIdAndUpdate(
     id,
-    { 
+    {
       activo,
       tokenInvalidadoEn: activo === false ? new Date() : null,
       ...camposDesactivacion
     },
-    { returnDocument: 'after' } 
+    { returnDocument: 'after' }
   ).select('-password')
 
   await Auditoria.create({
@@ -204,7 +204,7 @@ export const cambiarEstado = async (req: Request, res: Response) => {
     fechaHora: new Date()
   })
 
-  res.json({ 
+  res.json({
     mensaje: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente`,
     usuario
   })
@@ -219,7 +219,7 @@ export const editarPerfil = async (req: Request, res: Response) => {
     return
   }
 
-  const { nombre, email } = req.body
+  const { nombre, email, telefono } = req.body
   const adminId = (req as any).usuario.id
 
   const usuario = await Usuario.findById(id)
@@ -227,7 +227,12 @@ export const editarPerfil = async (req: Request, res: Response) => {
     res.status(404).json({ mensaje: 'Usuario no encontrado' })
     return
   }
-
+  if (telefono !== undefined && telefono !== null && telefono !== '') {
+    if (!/^9\d{8}$/.test(telefono)) {
+      res.status(400).json({ mensaje: 'El teléfono debe tener 9 dígitos y comenzar con 9' })
+      return
+    }
+  }
 
   if (email && email.toLowerCase() !== usuario.email) {
     const existeEmail = await Usuario.findOne({
@@ -259,6 +264,11 @@ export const editarPerfil = async (req: Request, res: Response) => {
     usuario.nombre = nombre.trim()
   }
 
+  if (telefono !== undefined && telefono !== usuario.telefono) {
+    camposAlterados.telefono = { antes: usuario.telefono, despues: telefono || null }
+    usuario.telefono = telefono || null
+  }
+
   if (email && email.toLowerCase() !== usuario.email) {
     camposAlterados.email = { antes: usuario.email, despues: email.toLowerCase() }
     usuario.email = email.toLowerCase()
@@ -273,7 +283,7 @@ export const editarPerfil = async (req: Request, res: Response) => {
   try {
     await usuario.save()
   } catch (err: any) {
- 
+
     if (err.code === 11000) {
       res.status(409).json({
         campo: 'email',
@@ -310,7 +320,7 @@ export const desbloquearUsuario = async (req: Request, res: Response) => {
 
   const usuario = await Usuario.findByIdAndUpdate(
     id,
-    { 
+    {
       bloqueado: false,
       intentosFallidos: 0,
       fechaBloqueo: null
@@ -323,7 +333,7 @@ export const desbloquearUsuario = async (req: Request, res: Response) => {
     return
   }
 
-  res.json({ 
+  res.json({
     mensaje: 'Usuario desbloqueado correctamente',
     usuario
   })

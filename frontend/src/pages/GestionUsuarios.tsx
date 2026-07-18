@@ -7,15 +7,14 @@ interface Usuario {
   nombre: string
   username: string
   email: string
-  telefono?: string
+  telefono?: string | null
   rol: 'vendedor' | 'dueño' | 'admin'
   activo: boolean
   bloqueado: boolean
-  creadoPor?: { nombre: string }
+  debeCambiarContrasena: boolean
   motivoDesactivacion?: string | null
   detalleDesactivacion?: string | null
   fechaDesactivacion?: string | null
-  debeCambiarContrasena: boolean 
   desactivadoPor?: { nombre: string } | null
 }
 
@@ -34,6 +33,7 @@ export default function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [modalCrear, setModalCrear] = useState(false)
+  const [modalEditar, setModalEditar] = useState(false)
   const [modalDesactivar, setModalDesactivar] = useState(false)
   const [modalDetalle, setModalDetalle] = useState(false)
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<Usuario | null>(null)
@@ -42,10 +42,15 @@ export default function GestionUsuarios() {
   const [motivoDesactivar, setMotivoDesactivar] = useState('')
   const [detalleDesactivar, setDetalleDesactivar] = useState('')
   const [errorDesactivar, setErrorDesactivar] = useState('')
+  const [emailDuplicado, setEmailDuplicado] = useState(false)
 
   const [form, setForm] = useState({
     nombre: '', username: '', email: '',
     telefono: '', password: '', rol: 'vendedor'
+  })
+
+  const [formEditar, setFormEditar] = useState({
+    nombre: '', email: '', telefono: ''
   })
 
   const headers = { Authorization: `Bearer ${getToken()}` }
@@ -84,6 +89,58 @@ export default function GestionUsuarios() {
     }
   }
 
+  const abrirModalEditar = (usuario: Usuario) => {
+    setUsuarioSeleccionado(usuario)
+    setFormEditar({
+      nombre: usuario.nombre,
+      email: usuario.email,
+      telefono: usuario.telefono || ''
+    })
+    setFormError('')
+    setEmailDuplicado(false)
+    setModalEditar(true)
+  }
+
+  const handleEditar = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError('')
+    setEmailDuplicado(false)
+
+    if (!formEditar.nombre.trim()) {
+      setFormError('El nombre es obligatorio')
+      return
+    }
+    if (!formEditar.email.trim()) {
+      setFormError('El correo es obligatorio')
+      return
+    }
+    if (formEditar.telefono && !/^9\d{8}$/.test(formEditar.telefono)) {
+      setFormError('El teléfono debe tener 9 dígitos y comenzar con 9')
+      return
+    }
+
+    setFormLoading(true)
+    try {
+      await axios.patch(`${API}/usuarios/${usuarioSeleccionado?._id}/editar`, {
+        nombre: formEditar.nombre.trim(),
+        email: formEditar.email.trim(),
+        telefono: formEditar.telefono.trim() || null
+      }, { headers })
+      setModalEditar(false)
+      cargarUsuarios()
+    } catch (error: any) {
+      const mensaje = error.response?.data?.mensaje || 'Error al editar usuario'
+      if (error.response?.status === 409) {
+        setEmailDuplicado(true)
+        setFormError(mensaje)
+      } else {
+        setFormError(mensaje)
+      }
+    } finally {
+      setFormLoading(false)
+    }
+  }
+
   const abrirModalDesactivar = (usuario: Usuario) => {
     setUsuarioSeleccionado(usuario)
     setMotivoDesactivar('')
@@ -100,8 +157,8 @@ export default function GestionUsuarios() {
     try {
       await axios.patch(`${API}/usuarios/${usuarioSeleccionado._id}/estado`, {
         activo: false,
-        motivo: motivoDesactivar,           
-        detalle: detalleDesactivar.trim()   
+        motivoDesactivacion: motivoDesactivar,
+        detalleDesactivacion: detalleDesactivar.trim()
       }, { headers })
       setModalDesactivar(false)
       cargarUsuarios()
@@ -114,9 +171,7 @@ export default function GestionUsuarios() {
 
   const handleActivar = async (usuario: Usuario) => {
     try {
-      await axios.patch(`${API}/usuarios/${usuario._id}/estado`, {
-        activo: true
-      }, { headers })
+      await axios.patch(`${API}/usuarios/${usuario._id}/estado`, { activo: true }, { headers })
       cargarUsuarios()
     } catch {
       alert('Error al activar usuario')
@@ -169,6 +224,7 @@ export default function GestionUsuarios() {
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-4 text-muted-foreground font-medium">#</th>
                 <th className="text-left py-3 px-4 text-muted-foreground font-medium">Usuario</th>
+                <th className="text-left py-3 px-4 text-muted-foreground font-medium">Teléfono</th>
                 <th className="text-left py-3 px-4 text-muted-foreground font-medium">Rol</th>
                 <th className="text-left py-3 px-4 text-muted-foreground font-medium">Estado</th>
                 <th className="text-left py-3 px-4 text-muted-foreground font-medium">Motivo desactivación</th>
@@ -184,33 +240,32 @@ export default function GestionUsuarios() {
                     <p className="text-xs text-muted-foreground">@{usuario.username}</p>
                     <p className="text-xs text-muted-foreground">{usuario.email}</p>
                   </td>
+                  <td className="py-3 px-4 text-muted-foreground text-sm">
+                    {usuario.telefono || '—'}
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${colorRol(usuario.rol)}`}>
                       {usuario.rol}
                     </span>
                   </td>
-                 <td className="py-3 px-4">
-  <div className="flex flex-col gap-1">
-    <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
-      !usuario.activo 
-        ? 'bg-error/10 text-error' 
-        : usuario.debeCambiarContrasena
-          ? 'bg-warning/10 text-warning'
-          : 'bg-success/10 text-success'
-    }`}>
-      {!usuario.activo 
-        ? 'Inactivo' 
-        : usuario.debeCambiarContrasena 
-          ? 'Pendiente' 
-          : 'Activo'}
-    </span>
-    {usuario.bloqueado && (
-      <span className="text-xs px-2 py-1 rounded-full font-medium bg-warning/10 text-warning w-fit">
-        Bloqueado
-      </span>
-    )}
-  </div>
-</td>
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium w-fit ${
+                        !usuario.activo
+                          ? 'bg-error/10 text-error'
+                          : usuario.debeCambiarContrasena
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-success/10 text-success'
+                      }`}>
+                        {!usuario.activo ? 'Inactivo' : usuario.debeCambiarContrasena ? 'Pendiente' : 'Activo'}
+                      </span>
+                      {usuario.bloqueado && (
+                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-warning/10 text-warning w-fit">
+                          Bloqueado
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3 px-4">
                     {!usuario.activo && usuario.motivoDesactivacion ? (
                       <div>
@@ -229,6 +284,12 @@ export default function GestionUsuarios() {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
+                      {/* Botón editar */}
+                      <button onClick={() => abrirModalEditar(usuario)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition"
+                        title="Editar">
+                        <Icon icon="solar:pen-new-square-linear" height={16} />
+                      </button>
                       {usuario.activo ? (
                         <button onClick={() => abrirModalDesactivar(usuario)}
                           className="w-8 h-8 rounded-full flex items-center justify-center bg-error/10 text-error hover:bg-error/20 transition"
@@ -296,7 +357,7 @@ export default function GestionUsuarios() {
                 </label>
                 <input type="text" value={form.telefono}
                   onChange={e => setForm({ ...form, telefono: e.target.value })}
-                  placeholder="9XXXXXXXX"
+                  placeholder="9XXXXXXXX" maxLength={9}
                   className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
               </div>
               <div>
@@ -324,6 +385,58 @@ export default function GestionUsuarios() {
         </div>
       )}
 
+      {/* ─── Modal editar usuario ──────────────────────────────────────────── */}
+      {modalEditar && usuarioSeleccionado && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-semibold text-foreground">Editar usuario</h2>
+              <button onClick={() => setModalEditar(false)} className="text-muted-foreground hover:text-foreground">
+                <Icon icon="solar:close-circle-linear" height={22} />
+              </button>
+            </div>
+            <form onSubmit={handleEditar} className="flex flex-col gap-4">
+              <div>
+                <label className="text-sm text-foreground mb-1 block">Nombre <span className="text-error">*</span></label>
+                <input type="text" value={formEditar.nombre}
+                  onChange={e => setFormEditar({ ...formEditar, nombre: e.target.value })}
+                  placeholder="Nombre completo"
+                  className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+              </div>
+              <div>
+                <label className="text-sm text-foreground mb-1 block">Email <span className="text-error">*</span></label>
+                <input type="email" value={formEditar.email}
+                  onChange={e => { setFormEditar({ ...formEditar, email: e.target.value }); setEmailDuplicado(false) }}
+                  placeholder="usuario@gmail.com"
+                  className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none transition ${
+                    emailDuplicado ? 'border-error focus:border-error' : 'border-border focus:border-primary'
+                  }`} />
+                {emailDuplicado && (
+                  <p className="text-error text-xs mt-1">
+                    El correo electrónico ingresado ya pertenece a otro usuario registrado en el sistema
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="text-sm text-foreground mb-1 block">
+                  Teléfono <span className="text-muted-foreground text-xs">(opcional)</span>
+                </label>
+                <input type="text" value={formEditar.telefono}
+                  onChange={e => setFormEditar({ ...formEditar, telefono: e.target.value })}
+                  placeholder="9XXXXXXXX" maxLength={9}
+                  className="w-full rounded-lg px-4 py-2.5 text-sm border border-border bg-transparent text-foreground outline-none focus:border-primary transition" />
+                <p className="text-xs text-muted-foreground mt-1">9 dígitos, debe comenzar con 9</p>
+              </div>
+              {formError && !emailDuplicado && <p className="text-error text-sm">{formError}</p>}
+              <button type="submit" disabled={formLoading}
+                className="w-full h-11 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primaryemphasis disabled:opacity-50 transition">
+                {formLoading ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ─── Modal desactivar ──────────────────────────────────────────────── */}
       {modalDesactivar && usuarioSeleccionado && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
@@ -338,7 +451,6 @@ export default function GestionUsuarios() {
               Selecciona el motivo para desactivar a{' '}
               <strong className="text-foreground">{usuarioSeleccionado.nombre}</strong>.
             </p>
-
             <div className="space-y-2 mb-4">
               {MOTIVOS_DESACTIVACION.map(m => (
                 <label key={m} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${
@@ -352,7 +464,6 @@ export default function GestionUsuarios() {
                 </label>
               ))}
             </div>
-
             <div className="mb-4">
               <label className="text-sm text-foreground mb-1 block">
                 Detalle / Justificación <span className="text-error">*</span>
@@ -363,18 +474,13 @@ export default function GestionUsuarios() {
                 rows={3}
                 className={`w-full rounded-lg px-4 py-2.5 text-sm border bg-transparent text-foreground outline-none focus:border-primary transition resize-none ${
                   detalleDesactivar.trim().length > 0 && detalleDesactivar.trim().length < 10
-                    ? 'border-error'
-                    : 'border-border'
+                    ? 'border-error' : 'border-border'
                 }`} />
-              <p className={`text-xs mt-1 ${
-                detalleDesactivar.trim().length >= 10 ? 'text-success' : 'text-muted-foreground'
-              }`}>
+              <p className={`text-xs mt-1 ${detalleDesactivar.trim().length >= 10 ? 'text-success' : 'text-muted-foreground'}`}>
                 {detalleDesactivar.trim().length}/10 caracteres mínimos
               </p>
             </div>
-
             {errorDesactivar && <p className="text-error text-sm mb-3">{errorDesactivar}</p>}
-
             <div className="flex gap-2">
               <button onClick={() => setModalDesactivar(false)}
                 className="flex-1 border border-border text-muted-foreground py-2 rounded-lg text-sm hover:bg-muted/30 transition">
